@@ -24,8 +24,12 @@ int main() {
     const auto height = static_cast<sint32>(imgRight.rows);
 
     SemiGlobalMatching::SGMOption sgmOption;
+    // 候选视差范围
     sgmOption.minDisparity = 0;
     sgmOption.maxDisparity = 64;
+    // 惩罚项P1、P2
+    sgmOption.p1 = 10;
+    sgmOption.p2Init = 150;
 
     SemiGlobalMatching sgm;
 
@@ -44,13 +48,23 @@ int main() {
 
     // 显示视差图
     cv::Mat dispMat = cv::Mat(height, width, CV_8UC1);
+    float32 minDisp = FLT_MAX, maxDisp = FLT_MIN;
+    for (sint32 i = 0; i < height; i++) {
+        for (sint32 j = 0; j < width; j++) {
+            const float32 disp = disparity[i * width + j];
+            if (disp != Invalid_Float) {
+                minDisp = std::min(minDisp, disp);
+                maxDisp = std::max(maxDisp, disp);
+            }
+        }
+    }
     for (uint32 i = 0; i < height; i++) {
         for (uint32 j = 0; j < width; j++) {
             const float32 disp = disparity[i * width + j];
             if (disp == Invalid_Float) {
                 dispMat.data[i * width + j] = 0;
             } else {
-                dispMat.data[i * width + j] = 2 * static_cast<uchar>(disp);
+                dispMat.data[i * width + j] = static_cast<uchar>((disp - minDisp) / (maxDisp - minDisp) * 255);
             }
         }
     }
