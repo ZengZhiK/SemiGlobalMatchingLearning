@@ -76,10 +76,10 @@ private:
     SGMOption option_;
 
     /** \brief 图像宽 */
-    uint32 width_;
+    sint32 width_;
 
     /** \brief 图像高 */
-    uint32 height_;
+    sint32 height_;
 
     /** \brief 左图像数据 */
     const uint8 *imgLeft_;

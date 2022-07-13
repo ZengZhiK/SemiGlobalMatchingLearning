@@ -165,16 +165,16 @@ void SemiGlobalMatching::costAggregation() const {
     SGMUtil::costAggregateLeftRight(imgLeft_, width_, height_, minDisparity, maxDisparity, P1, P2Int, costInit_,
                                     costAggr2_, false);
     // 上下聚合
-//    SGMUtil::costAggregateUpDown(img_left_, width_, height_, min_disparity, max_disparity, P1, P2_Int, cost_init_,
-//                                 cost_aggr_3_, true);
-//    SGMUtil::costAggregateUpDown(img_left_, width_, height_, min_disparity, max_disparity, P1, P2_Int, cost_init_,
-//                                 cost_aggr_4_, false);
+    SGMUtil::costAggregateUpDown(imgLeft_, width_, height_, minDisparity, maxDisparity, P1, P2Int, costInit_,
+                                 costAggr3_, true);
+    SGMUtil::costAggregateUpDown(imgLeft_, width_, height_, minDisparity, maxDisparity, P1, P2Int, costInit_,
+                                 costAggr4_, false);
 
 
     // 把4/8个方向加起来
     for (sint32 i = 0; i < size; i++) {
-        costAggr_[i] = costAggr1_[i] + costAggr2_[i];
-//        costAggr_[i] = costAggr1_[i] + costAggr2_[i] + cost_aggr_3_[i] + cost_aggr_4_[i];
+//        costAggr_[i] = costAggr1_[i] + costAggr2_[i];
+        costAggr_[i] = costAggr1_[i] + costAggr2_[i] + costAggr3_[i] + costAggr4_[i];
 //        if (option_.numPaths == 8) {
 //            costAggr_[i] += cost_aggr_5_[i] + cost_aggr_6_[i] + cost_aggr_7_[i] + cost_aggr_8_[i];
 //        }
@@ -186,6 +186,7 @@ void SemiGlobalMatching::computeDisparity() const {
     const sint32 &maxDisparity = option_.maxDisparity;
     const sint32 dispRange = maxDisparity - minDisparity;
 
+//    const auto *costPtr = costInit_;
     const auto *costPtr = costAggr_;
 
     // 逐像素计算最优视差
