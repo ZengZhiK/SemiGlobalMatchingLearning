@@ -24,9 +24,9 @@ public:
         // P1,P2
         // P2 = P2 / (Ip-Iq)
         sint32 p1;                 // 惩罚项参数P1
-        sint32 p2;                 // 惩罚项参数P2
+        sint32 p2Init;             // 惩罚项参数P2
 
-        SGMOption() : numPaths(8), minDisparity(0), maxDisparity(640), p1(10), p2(150) {}
+        SGMOption() : numPaths(8), minDisparity(0), maxDisparity(640), p1(10), p2Init(150) {}
     };
 
     /**
@@ -69,6 +69,9 @@ private:
     /** \brief 一致性检查 */
     void lrCheck() const;
 
+    /** \brief 内存释放	 */
+    void Release();
+
     /** \brief SGM参数 */
     SGMOption option_;
 
@@ -101,6 +104,33 @@ private:
 
     /** \brief 是否初始化标志 */
     bool isInitialized_;
+
+    // ↘ ↓ ↙   5  3  7
+    // →    ←	 1    2
+    // ↗ ↑ ↖   8  4  6
+    /** \brief 聚合匹配代价-方向1	*/
+    uint8 *costAggr1_;
+
+    /** \brief 聚合匹配代价-方向2	*/
+    uint8 *costAggr2_;
+
+    /** \brief 聚合匹配代价-方向3	*/
+    uint8 *costAggr3_;
+
+    /** \brief 聚合匹配代价-方向4	*/
+    uint8 *costAggr4_;
+
+    /** \brief 聚合匹配代价-方向5	*/
+    uint8 *costAggr5_;
+
+    /** \brief 聚合匹配代价-方向6	*/
+    uint8 *costAggr6_;
+
+    /** \brief 聚合匹配代价-方向7	*/
+    uint8 *costAggr7_;
+
+    /** \brief 聚合匹配代价-方向8	*/
+    uint8 *costAggr8_;
 };
 
 

@@ -6,6 +6,9 @@
 #define SGMUTIL_H
 
 #include "SGMType.h"
+#include <cassert>
+#include <vector>
+#include <cstring>
 
 namespace SGMUtil {
     //······ census工具集
@@ -18,14 +21,19 @@ namespace SGMUtil {
      * \param width		输入，图像宽
      * \param height	输入，图像高
      */
-    void census_transform_5x5(const uint8 *source, uint32 *census, const uint32 &width, const uint32 &height);
+    void censusTransform5x5(const uint8 *source, uint32 *census, const uint32 &width, const uint32 &height);
 
-    void census_transform_9x7(const uint8 *source, uint64 *census, const uint32 &width, const uint32 &height);
+    void censusTransform9x7(const uint8 *source, uint64 *census, const uint32 &width, const uint32 &height);
 
     // Hamming距离
-    uint8 Hamming32(const uint32 &x, const uint32 &y);
+    uint8 hamming32(const uint32 &x, const uint32 &y);
 
-    uint8 Hamming64(const uint64 &x, const uint64 &y);
+    uint8 hamming64(const uint64 &x, const uint64 &y);
+
+    void
+    costAggregateLeftRight(const uint8 *imgData, const uint32 &width, const uint32 &height, const sint32 &minDisparity,
+                           const sint32 &maxDisparity, const sint32 &p1, const sint32 &p2Init, const uint8 *costInit,
+                           uint8 *costAggr, bool isForward);
 };
 
 

@@ -20,8 +20,8 @@ int main() {
     }
 
     // ··· SGM匹配
-    const uint32 width = static_cast<uint32>(imgLeft.cols);
-    const uint32 height = static_cast<uint32>(imgRight.rows);
+    const auto width = static_cast<sint32>(imgLeft.cols);
+    const auto height = static_cast<sint32>(imgRight.rows);
 
     SemiGlobalMatching::SGMOption sgmOption;
     sgmOption.minDisparity = 0;
@@ -36,7 +36,7 @@ int main() {
     }
 
     // 匹配
-    float32 *disparity = new float32[width * height]();
+    auto *disparity = new float32[width * height]();
     if (!sgm.match(imgLeft.data, imgRight.data, disparity)) {
         std::cout << "SGM匹配失败！" << std::endl;
         return -2;
