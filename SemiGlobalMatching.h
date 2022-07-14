@@ -17,7 +17,7 @@ public:
     ~SemiGlobalMatching();
 
     struct SGMOption {
-        uint8 numPaths;            // 聚合路径数 4 and 8
+        uint8 numPaths;             // 聚合路径数 4 and 8
         sint32 minDisparity;        // 最小视差
         sint32 maxDisparity;        // 最大视差
 

@@ -170,14 +170,26 @@ void SemiGlobalMatching::costAggregation() const {
     SGMUtil::costAggregateUpDown(imgLeft_, width_, height_, minDisparity, maxDisparity, P1, P2Int, costInit_,
                                  costAggr4_, false);
 
+    // 左上到右下对角线聚合
+    SGMUtil::costAggregateDiagonalLeftRight(imgLeft_, width_, height_, minDisparity, maxDisparity, P1, P2Int, costInit_,
+                                            costAggr5_, true);
+    SGMUtil::costAggregateDiagonalLeftRight(imgLeft_, width_, height_, minDisparity, maxDisparity, P1, P2Int, costInit_,
+                                            costAggr6_, false);
+
+    // 右上到左下对角线聚合
+    SGMUtil::costAggregateDiagonalRightLeft(imgLeft_, width_, height_, minDisparity, maxDisparity, P1, P2Int, costInit_,
+                                            costAggr7_, true);
+    SGMUtil::costAggregateDiagonalRightLeft(imgLeft_, width_, height_, minDisparity, maxDisparity, P1, P2Int, costInit_,
+                                            costAggr8_, false);
+
 
     // 把4/8个方向加起来
     for (sint32 i = 0; i < size; i++) {
 //        costAggr_[i] = costAggr1_[i] + costAggr2_[i];
-        costAggr_[i] = costAggr1_[i] + costAggr2_[i] + costAggr3_[i] + costAggr4_[i];
-//        if (option_.numPaths == 8) {
-//            costAggr_[i] += cost_aggr_5_[i] + cost_aggr_6_[i] + cost_aggr_7_[i] + cost_aggr_8_[i];
-//        }
+//        costAggr_[i] = costAggr1_[i] + costAggr2_[i] + costAggr3_[i] + costAggr4_[i];
+//        costAggr_[i] = costAggr1_[i] + costAggr2_[i] + costAggr3_[i] + costAggr4_[i] + costAggr5_[i] + costAggr6_[i];
+        costAggr_[i] = costAggr1_[i] + costAggr2_[i] + costAggr3_[i] + costAggr4_[i] + costAggr5_[i] + costAggr6_[i] +
+                       costAggr7_[i] + costAggr8_[i];
     }
 }
 

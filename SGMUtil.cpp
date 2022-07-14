@@ -54,8 +54,8 @@ void SGMUtil::costAggregateLeftRight(const uint8 *imgData, const sint32 &width, 
     const auto &P1 = p1;
     const auto &P2Init = p2Init;
 
-    // 正向(左->右) ：is_forward = true ; direction = 1
-    // 反向(右->左) ：is_forward = false; direction = -1;
+    // 正向(左->右) ：isForward = true ; direction = 1
+    // 反向(右->左) ：isForward = false; direction = -1;
     const sint32 direction = isForward ? 1 : -1;
 
     // 聚合
@@ -128,8 +128,8 @@ void SGMUtil::costAggregateUpDown(const uint8 *imgData, const sint32 &width, con
     const auto &P1 = p1;
     const auto &P2Init = p2Init;
 
-    // 正向(上->下) ：is_forward = true ; direction = 1
-    // 反向(下->上) ：is_forward = false; direction = -1;
+    // 正向(上->下) ：isForward = true ; direction = 1
+    // 反向(下->上) ：isForward = false; direction = -1;
     const sint32 direction = isForward ? 1 : -1;
 
     // 聚合
@@ -194,4 +194,256 @@ void SGMUtil::costAggregateUpDown(const uint8 *imgData, const sint32 &width, con
         }
     }
 
+}
+
+void SGMUtil::costAggregateDiagonalLeftRight(const uint8 *imgData, const sint32 &width, const sint32 &height,
+                                             const sint32 &minDisparity, const sint32 &maxDisparity, const sint32 &p1,
+                                             const sint32 &p2Init, const uint8 *costInit, uint8 *costAggr,
+                                             bool isForward) {
+    assert(width > 1 && height > 1 && maxDisparity > minDisparity);
+
+    // 视差范围
+    const sint32 dispRange = maxDisparity - minDisparity;
+
+    // P1,P2
+    const auto& P1 = p1;
+    const auto& P2Init = p2Init;
+
+    // 正向(左上->右下) ：isForward = true ; direction = 1
+    // 反向(右下->左上) ：isForward = false; direction = -1;
+    const sint32 direction = isForward ? 1 : -1;
+
+    // 聚合
+
+    // 存储当前的行列号，判断是否到达影像边界
+    sint32 currentRow = 0;
+    sint32 currentCol = 0;
+
+    for (sint32 j = 0; j < width; j++) {
+        // 路径头为每一列的首(尾,dir=-1)行像素
+        auto costInitCol = (isForward) ? (costInit + j * dispRange) : (costInit + (height - 1) * width * dispRange + j * dispRange);
+        auto costAggrCol = (isForward) ? (costAggr + j * dispRange) : (costAggr + (height - 1) * width * dispRange + j * dispRange);
+        auto imgCol = (isForward) ? (imgData + j) : (imgData + (height - 1) * width + j);
+
+        // 路径上上个像素的代价数组，多两个元素是为了避免边界溢出（首尾各多一个）
+        std::vector<uint8> costLastPath(dispRange + 2, UINT8_MAX);
+
+        // 初始化：第一个像素的聚合代价值等于初始代价值
+        memcpy(costAggrCol, costInitCol, dispRange * sizeof(uint8));
+        memcpy(&costLastPath[1], costAggrCol, dispRange * sizeof(uint8));
+
+        // 路径上当前灰度值和上一个灰度值
+        uint8 gray = *imgCol;
+        uint8 grayLast = *imgCol;
+
+        // 对角线路径上的下一个像素，中间间隔width+1个像素
+        // 这里要多一个边界处理
+        // 沿对角线前进的时候会碰到影像列边界，策略是行号继续按原方向前进，列号到跳到另一边界
+        currentRow = isForward ? 0 : height - 1;
+        currentCol = j;
+        if (isForward && currentCol == width - 1 && currentRow < height - 1) {
+            // 左上->右下，碰右边界
+            costInitCol = costInit + (currentRow + direction) * width * dispRange;
+            costAggrCol = costAggr + (currentRow + direction) * width * dispRange;
+            imgCol = imgData + (currentRow + direction) * width;
+            currentCol = 0;
+        }
+        else if (!isForward && currentCol == 0 && currentRow > 0) {
+            // 右下->左上，碰左边界
+            costInitCol = costInit + (currentRow + direction) * width * dispRange + (width - 1) * dispRange;
+            costAggrCol = costAggr + (currentRow + direction) * width * dispRange + (width - 1) * dispRange;
+            imgCol = imgData + (currentRow + direction) * width + (width - 1);
+            currentCol = width - 1;
+        }
+        else {
+            costInitCol += direction * (width + 1) * dispRange;
+            costAggrCol += direction * (width + 1) * dispRange;
+            imgCol += direction * (width + 1);
+        }
+
+        // 路径上上个像素的最小代价值
+        uint8 minCostLastPath = UINT8_MAX;
+        for (auto cost : costLastPath) {
+            minCostLastPath = std::min(minCostLastPath, cost);
+        }
+
+        // 自方向上第2个像素开始按顺序聚合
+        for (sint32 i = 0; i < height - 1; i ++) {
+            gray = *imgCol;
+            uint8 minCost = UINT8_MAX;
+            for (sint32 d = 0; d < dispRange; d++) {
+                // Lr(p,d) = C(p,d) + min( Lr(p-r,d), Lr(p-r,d-1) + P1, Lr(p-r,d+1) + P1, min(Lr(p-r))+P2 ) - min(Lr(p-r))
+                const uint8  cost = costInitCol[d];
+                const uint16 l1 = costLastPath[d + 1];
+                const uint16 l2 = costLastPath[d] + P1;
+                const uint16 l3 = costLastPath[d + 2] + P1;
+                const uint16 l4 = minCostLastPath + std::max(P1, P2Init / (abs(gray - grayLast) + 1));
+
+                const uint8 costNew = cost + static_cast<uint8>(std::min(std::min(l1, l2), std::min(l3, l4)) - minCostLastPath);
+
+                costAggrCol[d] = costNew;
+                minCost = std::min(minCost, costNew);
+            }
+
+            // 重置上个像素的最小代价值和代价数组
+            minCostLastPath = minCost;
+            memcpy(&costLastPath[1], costAggrCol, dispRange * sizeof(uint8));
+
+            // 当前像素的行列号
+            currentRow += direction;
+            currentCol += direction;
+
+            // 下一个像素,这里要多一个边界处理
+            // 这里要多一个边界处理
+            // 沿对角线前进的时候会碰到影像列边界，策略是行号继续按原方向前进，列号到跳到另一边界
+            if (isForward && currentCol == width - 1 && currentRow < height - 1) {
+                // 左上->右下，碰右边界
+                costInitCol = costInit + (currentRow + direction) * width * dispRange;
+                costAggrCol = costAggr + (currentRow + direction) * width * dispRange;
+                imgCol = imgData + (currentRow + direction) * width;
+                currentCol = 0;
+            }
+            else if (!isForward && currentCol == 0 && currentRow > 0) {
+                // 右下->左上，碰左边界
+                costInitCol = costInit + (currentRow + direction) * width * dispRange + (width - 1) * dispRange;
+                costAggrCol = costAggr + (currentRow + direction) * width * dispRange + (width - 1) * dispRange;
+                imgCol = imgData + (currentRow + direction) * width + (width - 1);
+                currentCol = width - 1;
+            }
+            else {
+                costInitCol += direction * (width + 1) * dispRange;
+                costAggrCol += direction * (width + 1) * dispRange;
+                imgCol += direction * (width + 1);
+            }
+
+            // 像素值重新赋值
+            grayLast = gray;
+        }
+    }
+}
+
+void SGMUtil::costAggregateDiagonalRightLeft(const uint8 *imgData, const sint32 &width, const sint32 &height,
+                                             const sint32 &minDisparity, const sint32 &maxDisparity, const sint32 &p1,
+                                             const sint32 &p2Init, const uint8 *costInit, uint8 *costAggr,
+                                             bool isForward) {
+    assert(width > 1 && height > 1 && maxDisparity > minDisparity);
+
+    // 视差范围
+    const sint32 dispRange = maxDisparity - minDisparity;
+
+    // P1,P2
+    const auto& P1 = p1;
+    const auto& P2Init = p2Init;
+
+    // 正向(右上->左下) ：isForward = true ; direction = 1
+    // 反向(左下->右上) ：isForward = false; direction = -1;
+    const sint32 direction = isForward ? 1 : -1;
+
+    // 聚合
+
+    // 存储当前的行列号，判断是否到达影像边界
+    sint32 currentRow = 0;
+    sint32 currentCol = 0;
+
+    for (sint32 j = 0; j < width; j++) {
+        // 路径头为每一列的首(尾,dir=-1)行像素
+        auto costInitCol = (isForward) ? (costInit + j * dispRange) : (costInit + (height - 1) * width * dispRange + j * dispRange);
+        auto costAggrCol = (isForward) ? (costAggr + j * dispRange) : (costAggr + (height - 1) * width * dispRange + j * dispRange);
+        auto imgCol = (isForward) ? (imgData + j) : (imgData + (height - 1) * width + j);
+
+        // 路径上上个像素的代价数组，多两个元素是为了避免边界溢出（首尾各多一个）
+        std::vector<uint8> costLastPath(dispRange + 2, UINT8_MAX);
+
+        // 初始化：第一个像素的聚合代价值等于初始代价值
+        memcpy(costAggrCol, costInitCol, dispRange * sizeof(uint8));
+        memcpy(&costLastPath[1], costAggrCol, dispRange * sizeof(uint8));
+
+        // 路径上当前灰度值和上一个灰度值
+        uint8 gray = *imgCol;
+        uint8 grayLast = *imgCol;
+
+        // 对角线路径上的下一个像素，中间间隔width-1个像素
+        // 这里要多一个边界处理
+        // 沿对角线前进的时候会碰到影像列边界，策略是行号继续按原方向前进，列号到跳到另一边界
+        currentRow = isForward ? 0 : height - 1;
+        currentCol = j;
+        if (isForward && currentCol == 0 && currentRow < height - 1) {
+            // 右上->左下，碰左边界
+            costInitCol = costInit + (currentRow + direction) * width * dispRange + (width - 1) * dispRange;
+            costAggrCol = costAggr + (currentRow + direction) * width * dispRange + (width - 1) * dispRange;
+            imgCol = imgData + (currentRow + direction) * width + (width - 1);
+            currentCol = width - 1;
+        }
+        else if (!isForward && currentCol == width - 1 && currentRow > 0) {
+            // 左下->右上，碰右边界
+            costInitCol = costInit + (currentRow + direction) * width * dispRange ;
+            costAggrCol = costAggr + (currentRow + direction) * width * dispRange;
+            imgCol = imgData + (currentRow + direction) * width;
+            currentCol = 0;
+        }
+        else {
+            costInitCol += direction * (width - 1) * dispRange;
+            costAggrCol += direction * (width - 1) * dispRange;
+            imgCol += direction * (width - 1);
+        }
+
+        // 路径上上个像素的最小代价值
+        uint8 minCostLastPath = UINT8_MAX;
+        for (auto cost : costLastPath) {
+            minCostLastPath = std::min(minCostLastPath, cost);
+        }
+
+        // 自路径上第2个像素开始按顺序聚合
+        for (sint32 i = 0; i < height - 1; i++) {
+            gray = *imgCol;
+            uint8 minCost = UINT8_MAX;
+            for (sint32 d = 0; d < dispRange; d++) {
+                // Lr(p,d) = C(p,d) + min( Lr(p-r,d), Lr(p-r,d-1) + P1, Lr(p-r,d+1) + P1, min(Lr(p-r))+P2 ) - min(Lr(p-r))
+                const uint8  cost = costInitCol[d];
+                const uint16 l1 = costLastPath[d + 1];
+                const uint16 l2 = costLastPath[d] + P1;
+                const uint16 l3 = costLastPath[d + 2] + P1;
+                const uint16 l4 = minCostLastPath + std::max(P1, P2Init / (abs(gray - grayLast) + 1));
+
+                const uint8 costNew = cost + static_cast<uint8>(std::min(std::min(l1, l2), std::min(l3, l4)) - minCostLastPath);
+
+                costAggrCol[d] = costNew;
+                minCost = std::min(minCost, costNew);
+            }
+
+            // 重置上个像素的最小代价值和代价数组
+            minCostLastPath = minCost;
+            memcpy(&costLastPath[1], costAggrCol, dispRange * sizeof(uint8));
+
+            // 当前像素的行列号
+            currentRow += direction;
+            currentCol -= direction;
+
+            // 下一个像素,这里要多一个边界处理
+            // 这里要多一个边界处理
+            // 沿对角线前进的时候会碰到影像列边界，策略是行号继续按原方向前进，列号到跳到另一边界
+            if (isForward && currentCol == 0 && currentRow < height - 1) {
+                // 右上->左下，碰左边界
+                costInitCol = costInit + (currentRow + direction) * width * dispRange + (width - 1) * dispRange;
+                costAggrCol = costAggr + (currentRow + direction) * width * dispRange + (width - 1) * dispRange;
+                imgCol = imgData + (currentRow + direction) * width + (width - 1);
+                currentCol = width - 1;
+            }
+            else if (!isForward && currentCol == width - 1 && currentRow > 0) {
+                // 左下->右上，碰右边界
+                costInitCol = costInit + (currentRow + direction) * width * dispRange;
+                costAggrCol = costAggr + (currentRow + direction) * width * dispRange;
+                imgCol = imgData + (currentRow + direction) * width;
+                currentCol = 0;
+            }
+            else {
+                costInitCol += direction * (width - 1) * dispRange;
+                costAggrCol += direction * (width - 1) * dispRange;
+                imgCol += direction * (width - 1);
+            }
+
+            // 像素值重新赋值
+            grayLast = gray;
+        }
+    }
 }
