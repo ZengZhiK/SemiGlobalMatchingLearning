@@ -26,7 +26,11 @@ public:
         sint32 p1;                 // 惩罚项参数P1
         sint32 p2Init;             // 惩罚项参数P2
 
-        SGMOption() : numPaths(8), minDisparity(0), maxDisparity(640), p1(10), p2Init(150) {}
+        bool isChceckLR;        // 是否检查左右一致性
+        float32 lrCheckThres;        // 左右一致性约束阈值
+
+        SGMOption() : numPaths(8), minDisparity(0), maxDisparity(640), p1(10), p2Init(150), isChceckLR(true),
+                      lrCheckThres(1.0f) {}
     };
 
     /**
@@ -65,6 +69,9 @@ private:
 
     /** \brief 视差计算 */
     void computeDisparity() const;
+
+    /** \brief 右视差计算	 */
+    void computeDisparityRight() const;
 
     /** \brief 一致性检查 */
     void lrCheck() const;
@@ -131,6 +138,9 @@ private:
 
     /** \brief 聚合匹配代价-方向8	*/
     uint8 *costAggr8_;
+
+    /** \brief 右图像视差图 */
+    float32 *dispRight_;
 };
 
 

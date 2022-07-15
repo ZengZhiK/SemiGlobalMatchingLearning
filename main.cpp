@@ -56,6 +56,9 @@ int main() {
     // 惩罚项P1、P2
     sgmOption.p1 = 10;
     sgmOption.p2Init = 150;
+    // 一致性检查
+    sgmOption.isChceckLR = true;
+    sgmOption.lrCheckThres = 1.0f;
 
     SemiGlobalMatching sgm;
 

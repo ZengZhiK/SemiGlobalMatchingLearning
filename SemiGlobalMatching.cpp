@@ -57,6 +57,7 @@ SemiGlobalMatching::initialize(const uint32 &width, const uint32 &height, const 
 
     // 视差图
     this->dispLeft_ = new float32[width * height];
+    this->dispRight_ = new float32[width * height];
 
     this->isInitialized_ =
             this->censusLeft_ && this->censusRight_ && this->costInit_ && this->costAggr_ && this->dispLeft_;
@@ -247,10 +248,109 @@ void SemiGlobalMatching::computeDisparity() const {
                     static_cast<float32>(bestDisparity) + static_cast<float32>(cost_1 - cost_2) / (denom * 2.0f);
         }
     }
+
+    // 左右一致性检查
+    if (option_.isChceckLR) {
+        // 视差计算（右影像）
+        computeDisparityRight();
+        // 一致性检查
+        lrCheck();
+    }
+}
+
+void SemiGlobalMatching::computeDisparityRight() const {
+    const sint32 &minDisparity = option_.minDisparity;
+    const sint32 &maxDisparity = option_.maxDisparity;
+    const sint32 dispRange = maxDisparity - minDisparity;
+    if (dispRange <= 0) {
+        return;
+    }
+
+    // 左影像视差图
+    const auto disparity = dispRight_;
+    // 左影像聚合代价数组
+    const auto costPtr = costAggr_;
+
+    const sint32 width = width_;
+    const sint32 height = height_;
+
+    // 为了加快读取效率，把单个像素的所有代价值存储到局部数组里
+    std::vector<uint16> costLocal(dispRange);
+
+    // ---逐像素计算最优视差
+    // 通过左影像的代价，获取右影像的代价
+    // 右cost(xr,yr,d) = 左cost(xr+d,yl,d)
+    for (sint32 i = 0; i < height; i++) {
+        for (sint32 j = 0; j < width; j++) {
+            uint16 minCost = UINT16_MAX;
+            sint32 bestDisparity = 0;
+
+            // ---统计候选视差下的代价值
+            for (sint32 d = minDisparity; d < maxDisparity; d++) {
+                const sint32 dIdx = d - minDisparity;
+                const sint32 colLeft = j + d;
+                if (colLeft >= 0 && colLeft < width) {
+                    const auto &cost = costLocal[dIdx] = costPtr[i * width * dispRange + colLeft * dispRange +
+                                                                  dIdx];
+                    if (minCost > cost) {
+                        minCost = cost;
+                        bestDisparity = d;
+                    }
+                } else {
+                    costLocal[dIdx] = UINT16_MAX;
+                }
+            }
+
+            // ---子像素拟合
+            if (bestDisparity == minDisparity || bestDisparity == maxDisparity - 1) {
+                disparity[i * width + j] = Invalid_Float;
+                continue;
+            }
+            // 最优视差前一个视差的代价值cost_1，后一个视差的代价值cost_2
+            const sint32 idx_1 = bestDisparity - 1 - minDisparity;
+            const sint32 idx_2 = bestDisparity + 1 - minDisparity;
+            const uint16 cost_1 = costLocal[idx_1];
+            const uint16 cost_2 = costLocal[idx_2];
+            // 解一元二次曲线极值
+            const uint16 denom = std::max(1, cost_1 + cost_2 - 2 * minCost);
+            disparity[i * width + j] =
+                    static_cast<float32>(bestDisparity) + static_cast<float32>(cost_1 - cost_2 ) / (denom * 2.0f);
+
+        }
+    }
 }
 
 void SemiGlobalMatching::lrCheck() const {
+    const int width = width_;
+    const int height = height_;
 
+    const float32& threshold = option_.lrCheckThres;
+
+    // ---左右一致性检查
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            // 左影像视差值
+            auto& disp = dispLeft_[i * width + j];
+
+            // 根据视差值找到右影像上对应的同名像素
+            const auto colRight = static_cast<sint32>(j - disp + 0.5);
+
+            if(colRight >= 0 && colRight < width) {
+                // 右影像上同名像素的视差值
+                const auto& disp_r = dispRight_[i * width + colRight];
+
+                // 判断两个视差值是否一致（差值在阈值内）
+                if (abs(disp - disp_r) > threshold) {
+                    // 左右不一致
+                    disp = Invalid_Float;
+                }
+            }
+            else{
+                // 通过视差值在右影像上找不到同名像素（超出影像范围）
+                disp = Invalid_Float;
+            }
+        }
+    }
 }
 
 void SemiGlobalMatching::Release() {
@@ -268,4 +368,5 @@ void SemiGlobalMatching::Release() {
     SAFE_DELETE(costAggr7_);
     SAFE_DELETE(costAggr8_);
     SAFE_DELETE(dispLeft_);
+    SAFE_DELETE(dispRight_);
 }
