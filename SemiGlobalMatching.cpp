@@ -194,37 +194,53 @@ void SemiGlobalMatching::costAggregation() const {
 }
 
 void SemiGlobalMatching::computeDisparity() const {
-    const sint32 &minDisparity = option_.minDisparity;
-    const sint32 &maxDisparity = option_.maxDisparity;
+    const sint32& minDisparity = option_.minDisparity;
+    const sint32& maxDisparity = option_.maxDisparity;
     const sint32 dispRange = maxDisparity - minDisparity;
+    if(dispRange <= 0) {
+        return;
+    }
 
-//    const auto *costPtr = costInit_;
-    const auto *costPtr = costAggr_;
+    // 左影像视差图
+    const auto disparity = dispLeft_;
+    // 左影像聚合代价数组
+    const auto costPtr = costAggr_;
 
-    // 逐像素计算最优视差
-    for (sint32 i = 0; i < height_; i++) {
-        for (sint32 j = 0; j < width_; j++) {
+    const sint32 width = width_;
+    const sint32 height = height_;
+
+    // 为了加快读取效率，把单个像素的所有代价值存储到局部数组里
+    std::vector<uint16> costLocal(dispRange);
+
+    // ---逐像素计算最优视差
+    for (sint32 i = 0; i < height; i++) {
+        for (sint32 j = 0; j < width; j++) {
             uint16 minCost = UINT16_MAX;
-            uint16 maxCost = 0;
             sint32 bestDisparity = 0;
 
-            // 遍历视差范围内的所有代价值，输出最小代价值及对应的视差值
+            // ---遍历视差范围内的所有代价值，输出最小代价值及对应的视差值
             for (sint32 d = minDisparity; d < maxDisparity; d++) {
-                auto &cost = costPtr[i * width_ * dispRange + j * dispRange + (d - minDisparity)];
-                if (minCost > cost) {
+                const sint32 d_idx = d - minDisparity;
+                const auto& cost = costLocal[d_idx] = costPtr[i * width * dispRange + j * dispRange + d_idx];
+                if(minCost > cost) {
                     minCost = cost;
                     bestDisparity = d;
                 }
-                maxCost = std::max(maxCost, static_cast<uint16>(cost));
             }
 
-            // 最小代价值对应的视差值即为像素的最优视差
-            if (maxCost != minCost) {
-                dispLeft_[i * width_ + j] = static_cast<float>(bestDisparity);
-            } else {
-                // 如果所有视差下的代价值都一样，则该像素无效
-                dispLeft_[i * width_ + j] = Invalid_Float;
+            // ---子像素拟合
+            if (bestDisparity == minDisparity || bestDisparity == maxDisparity - 1) {
+                disparity[i * width + j] = Invalid_Float;
+                continue;
             }
+            // 最优视差前一个视差的代价值cost_1，后一个视差的代价值cost_2
+            const sint32 idx_1 = bestDisparity - 1 - minDisparity;
+            const sint32 idx_2 = bestDisparity + 1 - minDisparity;
+            const uint16 cost_1 = costLocal[idx_1];
+            const uint16 cost_2 = costLocal[idx_2];
+            // 解一元二次曲线极值
+            const uint16 denom = std::max(1, cost_1 + cost_2 - 2 * minCost);
+            disparity[i * width + j] = static_cast<float32>(bestDisparity) + static_cast<float32>(cost_1 - cost_2) / (denom * 2.0f);
         }
     }
 }
