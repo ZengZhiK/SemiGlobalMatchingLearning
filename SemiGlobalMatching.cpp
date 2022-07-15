@@ -185,19 +185,22 @@ void SemiGlobalMatching::costAggregation() const {
 
     // 把4/8个方向加起来
     for (sint32 i = 0; i < size; i++) {
-//        costAggr_[i] = costAggr1_[i] + costAggr2_[i];
-//        costAggr_[i] = costAggr1_[i] + costAggr2_[i] + costAggr3_[i] + costAggr4_[i];
-//        costAggr_[i] = costAggr1_[i] + costAggr2_[i] + costAggr3_[i] + costAggr4_[i] + costAggr5_[i] + costAggr6_[i];
-        costAggr_[i] = costAggr1_[i] + costAggr2_[i] + costAggr3_[i] + costAggr4_[i] + costAggr5_[i] + costAggr6_[i] +
-                       costAggr7_[i] + costAggr8_[i];
+        if (option_.numPaths == 4) {
+            costAggr_[i] = costAggr1_[i] + costAggr2_[i] + costAggr3_[i] + costAggr4_[i];
+        }
+        if (option_.numPaths == 8) {
+            costAggr_[i] =
+                    costAggr1_[i] + costAggr2_[i] + costAggr3_[i] + costAggr4_[i] + costAggr5_[i] + costAggr6_[i] +
+                    costAggr7_[i] + costAggr8_[i];
+        }
     }
 }
 
 void SemiGlobalMatching::computeDisparity() const {
-    const sint32& minDisparity = option_.minDisparity;
-    const sint32& maxDisparity = option_.maxDisparity;
+    const sint32 &minDisparity = option_.minDisparity;
+    const sint32 &maxDisparity = option_.maxDisparity;
     const sint32 dispRange = maxDisparity - minDisparity;
-    if(dispRange <= 0) {
+    if (dispRange <= 0) {
         return;
     }
 
@@ -221,8 +224,8 @@ void SemiGlobalMatching::computeDisparity() const {
             // ---遍历视差范围内的所有代价值，输出最小代价值及对应的视差值
             for (sint32 d = minDisparity; d < maxDisparity; d++) {
                 const sint32 d_idx = d - minDisparity;
-                const auto& cost = costLocal[d_idx] = costPtr[i * width * dispRange + j * dispRange + d_idx];
-                if(minCost > cost) {
+                const auto &cost = costLocal[d_idx] = costPtr[i * width * dispRange + j * dispRange + d_idx];
+                if (minCost > cost) {
                     minCost = cost;
                     bestDisparity = d;
                 }
@@ -240,7 +243,8 @@ void SemiGlobalMatching::computeDisparity() const {
             const uint16 cost_2 = costLocal[idx_2];
             // 解一元二次曲线极值
             const uint16 denom = std::max(1, cost_1 + cost_2 - 2 * minCost);
-            disparity[i * width + j] = static_cast<float32>(bestDisparity) + static_cast<float32>(cost_1 - cost_2) / (denom * 2.0f);
+            disparity[i * width + j] =
+                    static_cast<float32>(bestDisparity) + static_cast<float32>(cost_1 - cost_2) / (denom * 2.0f);
         }
     }
 }
