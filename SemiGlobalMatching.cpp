@@ -89,6 +89,22 @@ bool SemiGlobalMatching::match(const uint8 *imgLeft, const uint8 *imgRight, floa
     // 视差计算
     computeDisparity();
 
+    // 左右一致性检查
+    if (option_.isCheckLR) {
+        // 视差计算（右影像）
+        computeDisparityRight();
+        // 一致性检查
+        lrCheck();
+    }
+
+    // 移除小连通区
+    if (option_.isRemoveSpeckles) {
+        SGMUtil::removeSpeckles(dispLeft_, width_, height_, option_.diffRange, option_.minSpeckleArea, Invalid_Float);
+    }
+
+    // 中值滤波
+    SGMUtil::medianFilter(dispLeft_, dispLeft_, width_, height_, 3);
+
     memcpy(dispLeft, this->dispLeft_, this->width_ * this->height_ * sizeof(float32));
 
     return true;
@@ -213,6 +229,9 @@ void SemiGlobalMatching::computeDisparity() const {
     const sint32 width = width_;
     const sint32 height = height_;
 
+    const bool isCheckUnique = option_.isCheckUnique;
+    const float32 uniquenessRatio = option_.uniquenessRatio;
+
     // 为了加快读取效率，把单个像素的所有代价值存储到局部数组里
     std::vector<uint16> costLocal(dispRange);
 
@@ -220,6 +239,7 @@ void SemiGlobalMatching::computeDisparity() const {
     for (sint32 i = 0; i < height; i++) {
         for (sint32 j = 0; j < width; j++) {
             uint16 minCost = UINT16_MAX;
+            uint16 secMinCost = UINT16_MAX;
             sint32 bestDisparity = 0;
 
             // ---遍历视差范围内的所有代价值，输出最小代价值及对应的视差值
@@ -229,6 +249,25 @@ void SemiGlobalMatching::computeDisparity() const {
                 if (minCost > cost) {
                     minCost = cost;
                     bestDisparity = d;
+                }
+            }
+
+            if (isCheckUnique) {
+                // 再遍历一次，输出次最小代价值
+                for (sint32 d = minDisparity; d < maxDisparity; d++) {
+                    if (d == bestDisparity) {
+                        // 跳过最小代价值
+                        continue;
+                    }
+                    const auto& cost = costLocal[d - minDisparity];
+                    secMinCost = std::min(secMinCost, cost);
+                }
+
+                // 判断唯一性约束
+                // 若(min-sec)/min < min*(1-uniquness)，则为无效估计
+                if (secMinCost - minCost <= static_cast<uint16>(minCost * (1 - uniquenessRatio))) {
+                    disparity[i * width + j] = Invalid_Float;
+                    continue;
                 }
             }
 
@@ -248,14 +287,6 @@ void SemiGlobalMatching::computeDisparity() const {
                     static_cast<float32>(bestDisparity) + static_cast<float32>(cost_1 - cost_2) / (denom * 2.0f);
         }
     }
-
-    // 左右一致性检查
-    if (option_.isChceckLR) {
-        // 视差计算（右影像）
-        computeDisparityRight();
-        // 一致性检查
-        lrCheck();
-    }
 }
 
 void SemiGlobalMatching::computeDisparityRight() const {
@@ -274,6 +305,9 @@ void SemiGlobalMatching::computeDisparityRight() const {
     const sint32 width = width_;
     const sint32 height = height_;
 
+    const bool isCheckUnique = option_.isCheckUnique;
+    const float32 uniquenessRatio = option_.uniquenessRatio;
+
     // 为了加快读取效率，把单个像素的所有代价值存储到局部数组里
     std::vector<uint16> costLocal(dispRange);
 
@@ -283,6 +317,7 @@ void SemiGlobalMatching::computeDisparityRight() const {
     for (sint32 i = 0; i < height; i++) {
         for (sint32 j = 0; j < width; j++) {
             uint16 minCost = UINT16_MAX;
+            uint16 secMinCost = UINT16_MAX;
             sint32 bestDisparity = 0;
 
             // ---统计候选视差下的代价值
@@ -298,6 +333,25 @@ void SemiGlobalMatching::computeDisparityRight() const {
                     }
                 } else {
                     costLocal[dIdx] = UINT16_MAX;
+                }
+            }
+
+            if (isCheckUnique) {
+                // 再遍历一次，输出次最小代价值
+                for (sint32 d = minDisparity; d < maxDisparity; d++) {
+                    if (d == bestDisparity) {
+                        // 跳过最小代价值
+                        continue;
+                    }
+                    const auto& cost = costLocal[d - minDisparity];
+                    secMinCost = std::min(secMinCost, cost);
+                }
+
+                // 判断唯一性约束
+                // 若(min-sec)/min < min*(1-uniquness)，则为无效估计
+                if (secMinCost - minCost <= static_cast<uint16>(minCost * (1 - uniquenessRatio))) {
+                    disparity[i * width + j] = Invalid_Float;
+                    continue;
                 }
             }
 

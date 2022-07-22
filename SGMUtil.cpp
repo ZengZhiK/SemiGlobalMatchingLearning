@@ -206,8 +206,8 @@ void SGMUtil::costAggregateDiagonalLeftRight(const uint8 *imgData, const sint32 
     const sint32 dispRange = maxDisparity - minDisparity;
 
     // P1,P2
-    const auto& P1 = p1;
-    const auto& P2Init = p2Init;
+    const auto &P1 = p1;
+    const auto &P2Init = p2Init;
 
     // 正向(左上->右下) ：isForward = true ; direction = 1
     // 反向(右下->左上) ：isForward = false; direction = -1;
@@ -221,8 +221,10 @@ void SGMUtil::costAggregateDiagonalLeftRight(const uint8 *imgData, const sint32 
 
     for (sint32 j = 0; j < width; j++) {
         // 路径头为每一列的首(尾,dir=-1)行像素
-        auto costInitCol = (isForward) ? (costInit + j * dispRange) : (costInit + (height - 1) * width * dispRange + j * dispRange);
-        auto costAggrCol = (isForward) ? (costAggr + j * dispRange) : (costAggr + (height - 1) * width * dispRange + j * dispRange);
+        auto costInitCol = (isForward) ? (costInit + j * dispRange) : (costInit + (height - 1) * width * dispRange +
+                                                                       j * dispRange);
+        auto costAggrCol = (isForward) ? (costAggr + j * dispRange) : (costAggr + (height - 1) * width * dispRange +
+                                                                       j * dispRange);
         auto imgCol = (isForward) ? (imgData + j) : (imgData + (height - 1) * width + j);
 
         // 路径上上个像素的代价数组，多两个元素是为了避免边界溢出（首尾各多一个）
@@ -247,15 +249,13 @@ void SGMUtil::costAggregateDiagonalLeftRight(const uint8 *imgData, const sint32 
             costAggrCol = costAggr + (currentRow + direction) * width * dispRange;
             imgCol = imgData + (currentRow + direction) * width;
             currentCol = 0;
-        }
-        else if (!isForward && currentCol == 0 && currentRow > 0) {
+        } else if (!isForward && currentCol == 0 && currentRow > 0) {
             // 右下->左上，碰左边界
             costInitCol = costInit + (currentRow + direction) * width * dispRange + (width - 1) * dispRange;
             costAggrCol = costAggr + (currentRow + direction) * width * dispRange + (width - 1) * dispRange;
             imgCol = imgData + (currentRow + direction) * width + (width - 1);
             currentCol = width - 1;
-        }
-        else {
+        } else {
             costInitCol += direction * (width + 1) * dispRange;
             costAggrCol += direction * (width + 1) * dispRange;
             imgCol += direction * (width + 1);
@@ -263,23 +263,24 @@ void SGMUtil::costAggregateDiagonalLeftRight(const uint8 *imgData, const sint32 
 
         // 路径上上个像素的最小代价值
         uint8 minCostLastPath = UINT8_MAX;
-        for (auto cost : costLastPath) {
+        for (auto cost: costLastPath) {
             minCostLastPath = std::min(minCostLastPath, cost);
         }
 
         // 自方向上第2个像素开始按顺序聚合
-        for (sint32 i = 0; i < height - 1; i ++) {
+        for (sint32 i = 0; i < height - 1; i++) {
             gray = *imgCol;
             uint8 minCost = UINT8_MAX;
             for (sint32 d = 0; d < dispRange; d++) {
                 // Lr(p,d) = C(p,d) + min( Lr(p-r,d), Lr(p-r,d-1) + P1, Lr(p-r,d+1) + P1, min(Lr(p-r))+P2 ) - min(Lr(p-r))
-                const uint8  cost = costInitCol[d];
+                const uint8 cost = costInitCol[d];
                 const uint16 l1 = costLastPath[d + 1];
                 const uint16 l2 = costLastPath[d] + P1;
                 const uint16 l3 = costLastPath[d + 2] + P1;
                 const uint16 l4 = minCostLastPath + std::max(P1, P2Init / (abs(gray - grayLast) + 1));
 
-                const uint8 costNew = cost + static_cast<uint8>(std::min(std::min(l1, l2), std::min(l3, l4)) - minCostLastPath);
+                const uint8 costNew =
+                        cost + static_cast<uint8>(std::min(std::min(l1, l2), std::min(l3, l4)) - minCostLastPath);
 
                 costAggrCol[d] = costNew;
                 minCost = std::min(minCost, costNew);
@@ -302,15 +303,13 @@ void SGMUtil::costAggregateDiagonalLeftRight(const uint8 *imgData, const sint32 
                 costAggrCol = costAggr + (currentRow + direction) * width * dispRange;
                 imgCol = imgData + (currentRow + direction) * width;
                 currentCol = 0;
-            }
-            else if (!isForward && currentCol == 0 && currentRow > 0) {
+            } else if (!isForward && currentCol == 0 && currentRow > 0) {
                 // 右下->左上，碰左边界
                 costInitCol = costInit + (currentRow + direction) * width * dispRange + (width - 1) * dispRange;
                 costAggrCol = costAggr + (currentRow + direction) * width * dispRange + (width - 1) * dispRange;
                 imgCol = imgData + (currentRow + direction) * width + (width - 1);
                 currentCol = width - 1;
-            }
-            else {
+            } else {
                 costInitCol += direction * (width + 1) * dispRange;
                 costAggrCol += direction * (width + 1) * dispRange;
                 imgCol += direction * (width + 1);
@@ -332,8 +331,8 @@ void SGMUtil::costAggregateDiagonalRightLeft(const uint8 *imgData, const sint32 
     const sint32 dispRange = maxDisparity - minDisparity;
 
     // P1,P2
-    const auto& P1 = p1;
-    const auto& P2Init = p2Init;
+    const auto &P1 = p1;
+    const auto &P2Init = p2Init;
 
     // 正向(右上->左下) ：isForward = true ; direction = 1
     // 反向(左下->右上) ：isForward = false; direction = -1;
@@ -347,8 +346,10 @@ void SGMUtil::costAggregateDiagonalRightLeft(const uint8 *imgData, const sint32 
 
     for (sint32 j = 0; j < width; j++) {
         // 路径头为每一列的首(尾,dir=-1)行像素
-        auto costInitCol = (isForward) ? (costInit + j * dispRange) : (costInit + (height - 1) * width * dispRange + j * dispRange);
-        auto costAggrCol = (isForward) ? (costAggr + j * dispRange) : (costAggr + (height - 1) * width * dispRange + j * dispRange);
+        auto costInitCol = (isForward) ? (costInit + j * dispRange) : (costInit + (height - 1) * width * dispRange +
+                                                                       j * dispRange);
+        auto costAggrCol = (isForward) ? (costAggr + j * dispRange) : (costAggr + (height - 1) * width * dispRange +
+                                                                       j * dispRange);
         auto imgCol = (isForward) ? (imgData + j) : (imgData + (height - 1) * width + j);
 
         // 路径上上个像素的代价数组，多两个元素是为了避免边界溢出（首尾各多一个）
@@ -373,15 +374,13 @@ void SGMUtil::costAggregateDiagonalRightLeft(const uint8 *imgData, const sint32 
             costAggrCol = costAggr + (currentRow + direction) * width * dispRange + (width - 1) * dispRange;
             imgCol = imgData + (currentRow + direction) * width + (width - 1);
             currentCol = width - 1;
-        }
-        else if (!isForward && currentCol == width - 1 && currentRow > 0) {
+        } else if (!isForward && currentCol == width - 1 && currentRow > 0) {
             // 左下->右上，碰右边界
-            costInitCol = costInit + (currentRow + direction) * width * dispRange ;
+            costInitCol = costInit + (currentRow + direction) * width * dispRange;
             costAggrCol = costAggr + (currentRow + direction) * width * dispRange;
             imgCol = imgData + (currentRow + direction) * width;
             currentCol = 0;
-        }
-        else {
+        } else {
             costInitCol += direction * (width - 1) * dispRange;
             costAggrCol += direction * (width - 1) * dispRange;
             imgCol += direction * (width - 1);
@@ -389,7 +388,7 @@ void SGMUtil::costAggregateDiagonalRightLeft(const uint8 *imgData, const sint32 
 
         // 路径上上个像素的最小代价值
         uint8 minCostLastPath = UINT8_MAX;
-        for (auto cost : costLastPath) {
+        for (auto cost: costLastPath) {
             minCostLastPath = std::min(minCostLastPath, cost);
         }
 
@@ -399,13 +398,14 @@ void SGMUtil::costAggregateDiagonalRightLeft(const uint8 *imgData, const sint32 
             uint8 minCost = UINT8_MAX;
             for (sint32 d = 0; d < dispRange; d++) {
                 // Lr(p,d) = C(p,d) + min( Lr(p-r,d), Lr(p-r,d-1) + P1, Lr(p-r,d+1) + P1, min(Lr(p-r))+P2 ) - min(Lr(p-r))
-                const uint8  cost = costInitCol[d];
+                const uint8 cost = costInitCol[d];
                 const uint16 l1 = costLastPath[d + 1];
                 const uint16 l2 = costLastPath[d] + P1;
                 const uint16 l3 = costLastPath[d + 2] + P1;
                 const uint16 l4 = minCostLastPath + std::max(P1, P2Init / (abs(gray - grayLast) + 1));
 
-                const uint8 costNew = cost + static_cast<uint8>(std::min(std::min(l1, l2), std::min(l3, l4)) - minCostLastPath);
+                const uint8 costNew =
+                        cost + static_cast<uint8>(std::min(std::min(l1, l2), std::min(l3, l4)) - minCostLastPath);
 
                 costAggrCol[d] = costNew;
                 minCost = std::min(minCost, costNew);
@@ -428,15 +428,13 @@ void SGMUtil::costAggregateDiagonalRightLeft(const uint8 *imgData, const sint32 
                 costAggrCol = costAggr + (currentRow + direction) * width * dispRange + (width - 1) * dispRange;
                 imgCol = imgData + (currentRow + direction) * width + (width - 1);
                 currentCol = width - 1;
-            }
-            else if (!isForward && currentCol == width - 1 && currentRow > 0) {
+            } else if (!isForward && currentCol == width - 1 && currentRow > 0) {
                 // 左下->右上，碰右边界
                 costInitCol = costInit + (currentRow + direction) * width * dispRange;
                 costAggrCol = costAggr + (currentRow + direction) * width * dispRange;
                 imgCol = imgData + (currentRow + direction) * width;
                 currentCol = 0;
-            }
-            else {
+            } else {
                 costInitCol += direction * (width - 1) * dispRange;
                 costAggrCol += direction * (width - 1) * dispRange;
                 imgCol += direction * (width - 1);
@@ -444,6 +442,101 @@ void SGMUtil::costAggregateDiagonalRightLeft(const uint8 *imgData, const sint32 
 
             // 像素值重新赋值
             grayLast = gray;
+        }
+    }
+}
+
+void SGMUtil::removeSpeckles(float32 *dispMap, const sint32 &width, const sint32 &height, const sint32 &diffRange,
+                             const uint32 &minSpeckleArea, const float32 &invalidVal) {
+    assert(width > 0 && height > 0);
+    if (width < 0 || height < 0) {
+        return;
+    }
+
+    // 定义标记像素是否访问的数组
+    std::vector<bool> visited(uint32(width * height), false);
+    for (sint32 i = 0; i < height; i++) {
+        for (sint32 j = 0; j < width; j++) {
+            if (visited[i * width + j] || dispMap[i * width + j] == invalidVal) {
+                // 跳过已访问的像素及无效像素
+                continue;
+            }
+            // 广度优先遍历，区域跟踪
+            // 把连通域面积小于阈值的区域视差全设为无效值
+            std::vector<std::pair<sint32, sint32>> vec;
+            vec.emplace_back(i, j);
+            visited[i * width + j] = true;
+            uint32 cur = 0;
+            uint32 next = 0;
+            do {
+                // 广度优先遍历区域跟踪
+                next = vec.size();
+                for (uint32 k = cur; k < next; k++) {
+                    const auto &pixel = vec[k];
+                    const sint32 row = pixel.first;
+                    const sint32 col = pixel.second;
+                    const auto &dispBase = dispMap[row * width + col];
+                    // 8邻域遍历
+                    for (int r = -1; r <= 1; r++) {
+                        for (int c = -1; c <= 1; c++) {
+                            if (r == 0 && c == 0) {
+                                continue;
+                            }
+                            int rowr = row + r;
+                            int colc = col + c;
+                            if (rowr >= 0 && rowr < height && colc >= 0 && colc < width) {
+                                if (!visited[rowr * width + colc] &&
+                                    (dispMap[rowr * width + colc] != invalidVal) &&
+                                    abs(dispMap[rowr * width + colc] - dispBase) <= diffRange) {
+                                    vec.emplace_back(rowr, colc);
+                                    visited[rowr * width + colc] = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                cur = next;
+            } while (next < vec.size());
+
+            // 把连通域面积小于阈值的区域视差全设为无效值
+            if (vec.size() < minSpeckleArea) {
+                for (auto &pix: vec) {
+                    dispMap[pix.first * width + pix.second] = invalidVal;
+                }
+            }
+        }
+    }
+}
+
+void SGMUtil::medianFilter(const float32 *in, float32 *out, const sint32 &width, const sint32 &height,
+                           const sint32 &wndSize) {
+    const sint32 radius = wndSize / 2;
+    const sint32 size = wndSize * wndSize;
+
+    // 存储局部窗口内的数据
+    std::vector<float32> wnd_data;
+    wnd_data.reserve(size);
+
+    for (sint32 i = 0; i < height; i++) {
+        for (sint32 j = 0; j < width; j++) {
+            wnd_data.clear();
+
+            // 获取局部窗口数据
+            for (sint32 r = -radius; r <= radius; r++) {
+                for (sint32 c = -radius; c <= radius; c++) {
+                    const sint32 row = i + r;
+                    const sint32 col = j + c;
+                    if (row >= 0 && row < height && col >= 0 && col < width) {
+                        wnd_data.push_back(in[row * width + col]);
+                    }
+                }
+            }
+
+            // 排序
+            std::sort(wnd_data.begin(), wnd_data.end());
+
+            // 取中值
+            out[i * width + j] = wnd_data[wnd_data.size() / 2];
         }
     }
 }

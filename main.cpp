@@ -57,8 +57,15 @@ int main() {
     sgmOption.p1 = 10;
     sgmOption.p2Init = 150;
     // 一致性检查
-    sgmOption.isChceckLR = true;
+    sgmOption.isCheckLR = true;
     sgmOption.lrCheckThres = 1.0f;
+    // 唯一性约束
+    sgmOption.isCheckUnique = true;
+    sgmOption.uniquenessRatio = 0.99f;
+    // 剔除小连通区
+    sgmOption.isRemoveSpeckles = true;
+    sgmOption.minSpeckleArea = 50;
+    sgmOption.diffRange = 16;
 
     SemiGlobalMatching sgm;
 
@@ -100,7 +107,10 @@ int main() {
     cv::imwrite("../dispMap.png", dispMat);
     cv::imshow("dispMap", dispMat);
 
-    cv::Ptr<cv::StereoSGBM> sgbm = cv::StereoSGBM::create(0, 64, 3, 10, 150, 1, 0, 0, 0, 0,
+    cv::Ptr<cv::StereoSGBM> sgbm = cv::StereoSGBM::create(0, 64, 5, 10, 150,
+                                                          1, 0,
+                                                          1,
+                                                          50, 1,
                                                           cv::StereoSGBM::MODE_HH);
     cv::Mat dispOpenCV;
     sgbm->compute(imgLeft, imgRight, dispOpenCV);

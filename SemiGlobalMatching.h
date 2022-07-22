@@ -23,14 +23,23 @@ public:
 
         // P1,P2
         // P2 = P2 / (Ip-Iq)
-        sint32 p1;                 // 惩罚项参数P1
-        sint32 p2Init;             // 惩罚项参数P2
+        sint32 p1;              // 惩罚项参数P1
+        sint32 p2Init;          // 惩罚项参数P2
 
-        bool isChceckLR;        // 是否检查左右一致性
-        float32 lrCheckThres;        // 左右一致性约束阈值
+        bool isCheckLR;        // 是否检查左右一致性
+        float32 lrCheckThres;   // 左右一致性约束阈值
 
-        SGMOption() : numPaths(8), minDisparity(0), maxDisparity(640), p1(10), p2Init(150), isChceckLR(true),
-                      lrCheckThres(1.0f) {}
+        bool isCheckUnique;    // 是否检查唯一性
+        float32 uniquenessRatio;    // 唯一性约束阈值 （最小代价-次最小代价)/最小代价 > 阈值 为有效像素
+
+        bool isRemoveSpeckles;  // 是否移除小的连通区
+        sint32 minSpeckleArea;  // 最小的连通区面积（像素数）
+        sint32 diffRange;
+
+        SGMOption() : numPaths(8), minDisparity(0), maxDisparity(640), p1(10), p2Init(150),
+                      isCheckLR(true), lrCheckThres(1.0f),
+                      isCheckUnique(true), uniquenessRatio(0.95f),
+                      isRemoveSpeckles(true), minSpeckleArea(20), diffRange(16) {}
     };
 
     /**
