@@ -10,6 +10,7 @@
 #include <vector>
 #include <cstring>
 #include <algorithm>
+#include <iostream>
 
 namespace SGMUtil {
     //······ census工具集
@@ -128,6 +129,10 @@ namespace SGMUtil {
      * \param wnd_size			输入，窗口宽度
      */
     void medianFilter(const float32* in, float32* out, const sint32& width, const sint32& height, const sint32 &wndSize);
+
+    void showImageData(const uint8 *imgData, const sint32 &width, const sint32 &height);
+
+    void showCostData(const uint8 *costData, const sint32 &width, const sint32 &height, const sint32 &d);
 }
 
 

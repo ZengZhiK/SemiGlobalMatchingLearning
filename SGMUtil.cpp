@@ -50,6 +50,12 @@ void SGMUtil::costAggregateLeftRight(const uint8 *imgData, const sint32 &width, 
                                      const sint32 &p2Init, const uint8 *costInit, uint8 *costAggr, bool isForward) {
     assert(width > 0 && height > 0 && maxDisparity > minDisparity);
     const sint32 dispRange = maxDisparity - minDisparity;
+
+#if 0
+    SGMUtil::showImageData(imgData, width, 3);
+    SGMUtil::showCostData(costInit, width, 3, dispRange);
+#endif
+
     // P1,P2
     const auto &P1 = p1;
     const auto &P2Init = p2Init;
@@ -116,6 +122,10 @@ void SGMUtil::costAggregateLeftRight(const uint8 *imgData, const sint32 &width, 
             grayLast = gray;
         }
     }
+
+#if 0
+    SGMUtil::showCostData(costAggr, width, 3, dispRange);
+#endif
 }
 
 void SGMUtil::costAggregateUpDown(const uint8 *imgData, const sint32 &width, const sint32 &height,
@@ -540,3 +550,36 @@ void SGMUtil::medianFilter(const float32 *in, float32 *out, const sint32 &width,
         }
     }
 }
+
+void SGMUtil::showImageData(const uint8 *imgData, const sint32 &width, const sint32 &height) {
+//    for (int r = 0; r < height; ++r) {
+        for (int c = 0; c < width; ++c) {
+            if (c == 0) {
+                std::cout << "[";
+            }
+            if (c != width - 1) {
+                std::cout << sint32(imgData[height * width + c]) << ", ";
+            } else {
+                std::cout << sint32(imgData[height * width + c]) << "]" << std::endl;
+            }
+        }
+//    }
+}
+
+void SGMUtil::showCostData(const uint8 *costData, const sint32 &width, const sint32 &height, const sint32 &d) {
+//    for (int r = 0; r < height; ++r) {
+        for (int c = 0; c < width; ++c) {
+            for (int z = 0; z < d; ++z) {
+                if (z == 0) {
+                    std::cout << "[";
+                }
+                if (z != d - 1) {
+                    std::cout << sint32(costData[height * width * d + c * d + z]) << ", ";
+                } else {
+                    std::cout << sint32(costData[height * width * d + c * d + z]) << "]" << std::endl;
+                }
+            }
+//        }
+    }
+}
+
