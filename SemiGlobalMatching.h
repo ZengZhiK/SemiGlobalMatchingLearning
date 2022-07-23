@@ -71,10 +71,16 @@ private:
     void censusTransform() const;
 
     /** \brief 代价计算 */
-    void computeCost() const;
+    void computeCostCensus() const;
+
+    /** \brief 代价计算 */
+    void computeCostSAD() const;
 
     /** \brief 代价聚合 */
     void costAggregation() const;
+
+    /** \brief 视差计算 */
+    void computeDisparityBase() const;
 
     /** \brief 视差计算 */
     void computeDisparity() const;
@@ -110,10 +116,10 @@ private:
     uint32 *censusRight_;
 
     /** \brief 初始匹配代价 */
-    uint8 *costInit_;
+    uint32 *costInit_;
 
     /** \brief 聚合匹配代价 Cost Aggregation */
-    uint16 *costAggr_;
+    uint32 *costAggr_;
 
     /** \brief 左图像视差图 */
     float32 *dispLeft_;
@@ -125,28 +131,28 @@ private:
     // →    ←	 1    2
     // ↗ ↑ ↖   8  4  6
     /** \brief 聚合匹配代价-方向1	*/
-    uint8 *costAggr1_;
+    uint32 *costAggr1_;
 
     /** \brief 聚合匹配代价-方向2	*/
-    uint8 *costAggr2_;
+    uint32 *costAggr2_;
 
     /** \brief 聚合匹配代价-方向3	*/
-    uint8 *costAggr3_;
+    uint32 *costAggr3_;
 
     /** \brief 聚合匹配代价-方向4	*/
-    uint8 *costAggr4_;
+    uint32 *costAggr4_;
 
     /** \brief 聚合匹配代价-方向5	*/
-    uint8 *costAggr5_;
+    uint32 *costAggr5_;
 
     /** \brief 聚合匹配代价-方向6	*/
-    uint8 *costAggr6_;
+    uint32 *costAggr6_;
 
     /** \brief 聚合匹配代价-方向7	*/
-    uint8 *costAggr7_;
+    uint32 *costAggr7_;
 
     /** \brief 聚合匹配代价-方向8	*/
-    uint8 *costAggr8_;
+    uint32 *costAggr8_;
 
     /** \brief 右图像视差图 */
     float32 *dispRight_;

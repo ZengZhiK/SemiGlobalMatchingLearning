@@ -47,8 +47,8 @@ namespace SGMUtil {
      */
     void
     costAggregateLeftRight(const uint8 *imgData, const sint32 &width, const sint32 &height, const sint32 &minDisparity,
-                           const sint32 &maxDisparity, const sint32 &p1, const sint32 &p2Init, const uint8 *costInit,
-                           uint8 *costAggr, bool isForward);
+                           const sint32 &maxDisparity, const sint32 &p1, const sint32 &p2Init, const uint32 *costInit,
+                           uint32 *costAggr, bool isForward);
 
     /**
      * \brief 上下路径聚合 ↓ ↑
@@ -65,8 +65,8 @@ namespace SGMUtil {
      */
     void
     costAggregateUpDown(const uint8 *imgData, const sint32 &width, const sint32 &height, const sint32 &minDisparity,
-                        const sint32 &maxDisparity, const sint32 &p1, const sint32 &p2Init, const uint8 *costInit,
-                        uint8 *costAggr, bool isForward);
+                        const sint32 &maxDisparity, const sint32 &p1, const sint32 &p2Init, const uint32 *costInit,
+                        uint32 *costAggr, bool isForward);
 
     /**
      * \brief 对角线1路径聚合（左上<->右下）↘ ↖
@@ -85,8 +85,8 @@ namespace SGMUtil {
     costAggregateDiagonalLeftRight(const uint8 *imgData, const sint32 &width, const sint32 &height,
                                    const sint32 &minDisparity,
                                    const sint32 &maxDisparity, const sint32 &p1, const sint32 &p2Init,
-                                   const uint8 *costInit,
-                                   uint8 *costAggr, bool isForward);
+                                   const uint32 *costInit,
+                                   uint32 *costAggr, bool isForward);
 
     /**
      * \brief 对角线2路径聚合（右上<->左下）↙ ↗
@@ -105,8 +105,8 @@ namespace SGMUtil {
     costAggregateDiagonalRightLeft(const uint8 *imgData, const sint32 &width, const sint32 &height,
                                    const sint32 &minDisparity,
                                    const sint32 &maxDisparity, const sint32 &p1, const sint32 &p2Init,
-                                   const uint8 *costInit,
-                                   uint8 *costAggr, bool isForward);
+                                   const uint32 *costInit,
+                                   uint32 *costAggr, bool isForward);
 
     /**
      * \brief 剔除小连通区

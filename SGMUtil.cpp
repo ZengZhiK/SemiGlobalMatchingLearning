@@ -47,7 +47,7 @@ uint8 SGMUtil::hamming32(const uint32 &x, const uint32 &y) {
 
 void SGMUtil::costAggregateLeftRight(const uint8 *imgData, const sint32 &width, const sint32 &height,
                                      const sint32 &minDisparity, const sint32 &maxDisparity, const sint32 &p1,
-                                     const sint32 &p2Init, const uint8 *costInit, uint8 *costAggr, bool isForward) {
+                                     const sint32 &p2Init, const uint32 *costInit, uint32 *costAggr, bool isForward) {
     assert(width > 0 && height > 0 && maxDisparity > minDisparity);
     const sint32 dispRange = maxDisparity - minDisparity;
 
@@ -78,16 +78,16 @@ void SGMUtil::costAggregateLeftRight(const uint8 *imgData, const sint32 &width, 
         uint8 grayLast = *imgRow;
 
         // 路径上上个像素的代价数组，多两个元素是为了避免边界溢出（首尾各多一个）
-        std::vector<uint8> costLastPath(dispRange + 2, UINT8_MAX);
+        std::vector<uint32> costLastPath(dispRange + 2, UINT8_MAX);
         // 初始化：第一个像素的聚合代价值等于初始代价值
-        memcpy(costAggrRow, costInitRow, dispRange * sizeof(uint8));
-        memcpy(&costLastPath[1], costAggrRow, dispRange * sizeof(uint8));
+        memcpy(costAggrRow, costInitRow, dispRange * sizeof(uint32));
+        memcpy(&costLastPath[1], costAggrRow, dispRange * sizeof(uint32));
         costInitRow += direction * dispRange;
         costAggrRow += direction * dispRange;
         imgRow += direction;
 
         // 路径上上个像素的最小代价值
-        uint8 minCostLastPath = UINT8_MAX;
+        uint32 minCostLastPath = UINT8_MAX;
         for (auto cost: costLastPath) {
             minCostLastPath = std::min(minCostLastPath, cost);
         }
@@ -95,23 +95,23 @@ void SGMUtil::costAggregateLeftRight(const uint8 *imgData, const sint32 &width, 
         // 自方向上第2个像素开始按顺序聚合
         for (sint32 j = 0; j < width - 1; j++) {
             gray = *imgRow;
-            uint8 minCost = UINT8_MAX;
+            uint32 minCost = UINT8_MAX;
             for (sint32 d = 0; d < dispRange; d++) {
                 // Lr(p,d) = C(p,d) + min( Lr(p-r,d), Lr(p-r,d-1) + P1, Lr(p-r,d+1) + P1, min(Lr(p-r))+P2 ) - min(Lr(p-r))
-                const uint8 cost = costInitRow[d];
+                const uint32 cost = costInitRow[d];
 
-                const uint16 l1 = costLastPath[d + 1];
-                const uint16 l2 = costLastPath[d] + P1;
-                const uint16 l3 = costLastPath[d + 2] + P1;
-                const uint16 l4 = minCostLastPath + std::max(P1, P2Init / (abs(gray - grayLast) + 1));
-                uint8 costNew =
-                        cost + static_cast<uint8>(std::min(std::min(l1, l2), std::min(l3, l4)) - minCostLastPath);
+                const uint32 l1 = costLastPath[d + 1];
+                const uint32 l2 = costLastPath[d] + P1;
+                const uint32 l3 = costLastPath[d + 2] + P1;
+                const uint32 l4 = minCostLastPath + std::max(P1, P2Init / (abs(gray - grayLast) + 1));
+                uint32 costNew =
+                        cost + static_cast<uint32>(std::min(std::min(l1, l2), std::min(l3, l4)) - minCostLastPath);
                 costAggrRow[d] = costNew;
                 minCost = std::min(minCost, costNew);
             }
             // 重置上个像素的最小代价值和代价数组
             minCostLastPath = minCost;
-            memcpy(&costLastPath[1], costAggrRow, dispRange * sizeof(uint8));
+            memcpy(&costLastPath[1], costAggrRow, dispRange * sizeof(uint32));
 
             // 下一个像素
             costInitRow += direction * dispRange;
@@ -130,7 +130,7 @@ void SGMUtil::costAggregateLeftRight(const uint8 *imgData, const sint32 &width, 
 
 void SGMUtil::costAggregateUpDown(const uint8 *imgData, const sint32 &width, const sint32 &height,
                                   const sint32 &minDisparity, const sint32 &maxDisparity, const sint32 &p1,
-                                  const sint32 &p2Init, const uint8 *costInit, uint8 *costAggr, bool isForward) {
+                                  const sint32 &p2Init, const uint32 *costInit, uint32 *costAggr, bool isForward) {
     assert(width > 0 && height > 0 && maxDisparity > minDisparity);
     // 视差范围
     const sint32 dispRange = maxDisparity - minDisparity;
@@ -156,17 +156,17 @@ void SGMUtil::costAggregateUpDown(const uint8 *imgData, const sint32 &width, con
         uint8 grayLast = *imgCol;
 
         // 路径上上个像素的代价数组，多两个元素是为了避免边界溢出（首尾各多一个）
-        std::vector<uint8> costLastPath(dispRange + 2, UINT8_MAX);
+        std::vector<uint32> costLastPath(dispRange + 2, UINT8_MAX);
 
         // 初始化：第一个像素的聚合代价值等于初始代价值
-        memcpy(costAggrCol, costInitCol, dispRange * sizeof(uint8));
-        memcpy(&costLastPath[1], costAggrCol, dispRange * sizeof(uint8));
+        memcpy(costAggrCol, costInitCol, dispRange * sizeof(uint32));
+        memcpy(&costLastPath[1], costAggrCol, dispRange * sizeof(uint32));
         costInitCol += direction * width * dispRange;
         costAggrCol += direction * width * dispRange;
         imgCol += direction * width;
 
         // 路径上上个像素的最小代价值
-        uint8 minCostLastPath = UINT8_MAX;
+        uint32 minCostLastPath = UINT8_MAX;
         for (auto cost: costLastPath) {
             minCostLastPath = std::min(minCostLastPath, cost);
         }
@@ -174,25 +174,25 @@ void SGMUtil::costAggregateUpDown(const uint8 *imgData, const sint32 &width, con
         // 自方向上第2个像素开始按顺序聚合
         for (sint32 i = 0; i < height - 1; i++) {
             gray = *imgCol;
-            uint8 minCost = UINT8_MAX;
+            uint32 minCost = UINT8_MAX;
             for (sint32 d = 0; d < dispRange; d++) {
                 // Lr(p,d) = C(p,d) + min( Lr(p-r,d), Lr(p-r,d-1) + P1, Lr(p-r,d+1) + P1, min(Lr(p-r))+P2 ) - min(Lr(p-r))
-                const uint8 cost = costInitCol[d];
+                const uint32 cost = costInitCol[d];
 
-                const uint16 l1 = costLastPath[d + 1];
-                const uint16 l2 = costLastPath[d] + P1;
-                const uint16 l3 = costLastPath[d + 2] + P1;
-                const uint16 l4 = minCostLastPath + std::max(P1, P2Init / (abs(gray - grayLast) + 1));
+                const uint32 l1 = costLastPath[d + 1];
+                const uint32 l2 = costLastPath[d] + P1;
+                const uint32 l3 = costLastPath[d + 2] + P1;
+                const uint32 l4 = minCostLastPath + std::max(P1, P2Init / (abs(gray - grayLast) + 1));
 
-                const uint8 costNew =
-                        cost + static_cast<uint8>(std::min(std::min(l1, l2), std::min(l3, l4)) - minCostLastPath);
+                const uint32 costNew =
+                        cost + static_cast<uint32>(std::min(std::min(l1, l2), std::min(l3, l4)) - minCostLastPath);
                 costAggrCol[d] = costNew;
                 minCost = std::min(minCost, costNew);
             }
 
             // 重置上个像素的最小代价值和代价数组
             minCostLastPath = minCost;
-            memcpy(&costLastPath[1], costAggrCol, dispRange * sizeof(uint8));
+            memcpy(&costLastPath[1], costAggrCol, dispRange * sizeof(uint32));
 
             // 下一个像素
             costInitCol += direction * width * dispRange;
@@ -208,7 +208,7 @@ void SGMUtil::costAggregateUpDown(const uint8 *imgData, const sint32 &width, con
 
 void SGMUtil::costAggregateDiagonalLeftRight(const uint8 *imgData, const sint32 &width, const sint32 &height,
                                              const sint32 &minDisparity, const sint32 &maxDisparity, const sint32 &p1,
-                                             const sint32 &p2Init, const uint8 *costInit, uint8 *costAggr,
+                                             const sint32 &p2Init, const uint32 *costInit, uint32 *costAggr,
                                              bool isForward) {
     assert(width > 1 && height > 1 && maxDisparity > minDisparity);
 
@@ -238,11 +238,11 @@ void SGMUtil::costAggregateDiagonalLeftRight(const uint8 *imgData, const sint32 
         auto imgCol = (isForward) ? (imgData + j) : (imgData + (height - 1) * width + j);
 
         // 路径上上个像素的代价数组，多两个元素是为了避免边界溢出（首尾各多一个）
-        std::vector<uint8> costLastPath(dispRange + 2, UINT8_MAX);
+        std::vector<uint32> costLastPath(dispRange + 2, UINT8_MAX);
 
         // 初始化：第一个像素的聚合代价值等于初始代价值
-        memcpy(costAggrCol, costInitCol, dispRange * sizeof(uint8));
-        memcpy(&costLastPath[1], costAggrCol, dispRange * sizeof(uint8));
+        memcpy(costAggrCol, costInitCol, dispRange * sizeof(uint32));
+        memcpy(&costLastPath[1], costAggrCol, dispRange * sizeof(uint32));
 
         // 路径上当前灰度值和上一个灰度值
         uint8 gray = *imgCol;
@@ -272,7 +272,7 @@ void SGMUtil::costAggregateDiagonalLeftRight(const uint8 *imgData, const sint32 
         }
 
         // 路径上上个像素的最小代价值
-        uint8 minCostLastPath = UINT8_MAX;
+        uint32 minCostLastPath = UINT8_MAX;
         for (auto cost: costLastPath) {
             minCostLastPath = std::min(minCostLastPath, cost);
         }
@@ -280,17 +280,17 @@ void SGMUtil::costAggregateDiagonalLeftRight(const uint8 *imgData, const sint32 
         // 自方向上第2个像素开始按顺序聚合
         for (sint32 i = 0; i < height - 1; i++) {
             gray = *imgCol;
-            uint8 minCost = UINT8_MAX;
+            uint32 minCost = UINT8_MAX;
             for (sint32 d = 0; d < dispRange; d++) {
                 // Lr(p,d) = C(p,d) + min( Lr(p-r,d), Lr(p-r,d-1) + P1, Lr(p-r,d+1) + P1, min(Lr(p-r))+P2 ) - min(Lr(p-r))
-                const uint8 cost = costInitCol[d];
-                const uint16 l1 = costLastPath[d + 1];
-                const uint16 l2 = costLastPath[d] + P1;
-                const uint16 l3 = costLastPath[d + 2] + P1;
-                const uint16 l4 = minCostLastPath + std::max(P1, P2Init / (abs(gray - grayLast) + 1));
+                const uint32 cost = costInitCol[d];
+                const uint32 l1 = costLastPath[d + 1];
+                const uint32 l2 = costLastPath[d] + P1;
+                const uint32 l3 = costLastPath[d + 2] + P1;
+                const uint32 l4 = minCostLastPath + std::max(P1, P2Init / (abs(gray - grayLast) + 1));
 
-                const uint8 costNew =
-                        cost + static_cast<uint8>(std::min(std::min(l1, l2), std::min(l3, l4)) - minCostLastPath);
+                const uint32 costNew =
+                        cost + static_cast<uint32>(std::min(std::min(l1, l2), std::min(l3, l4)) - minCostLastPath);
 
                 costAggrCol[d] = costNew;
                 minCost = std::min(minCost, costNew);
@@ -298,7 +298,7 @@ void SGMUtil::costAggregateDiagonalLeftRight(const uint8 *imgData, const sint32 
 
             // 重置上个像素的最小代价值和代价数组
             minCostLastPath = minCost;
-            memcpy(&costLastPath[1], costAggrCol, dispRange * sizeof(uint8));
+            memcpy(&costLastPath[1], costAggrCol, dispRange * sizeof(uint32));
 
             // 当前像素的行列号
             currentRow += direction;
@@ -333,7 +333,7 @@ void SGMUtil::costAggregateDiagonalLeftRight(const uint8 *imgData, const sint32 
 
 void SGMUtil::costAggregateDiagonalRightLeft(const uint8 *imgData, const sint32 &width, const sint32 &height,
                                              const sint32 &minDisparity, const sint32 &maxDisparity, const sint32 &p1,
-                                             const sint32 &p2Init, const uint8 *costInit, uint8 *costAggr,
+                                             const sint32 &p2Init, const uint32 *costInit, uint32 *costAggr,
                                              bool isForward) {
     assert(width > 1 && height > 1 && maxDisparity > minDisparity);
 
@@ -363,11 +363,11 @@ void SGMUtil::costAggregateDiagonalRightLeft(const uint8 *imgData, const sint32 
         auto imgCol = (isForward) ? (imgData + j) : (imgData + (height - 1) * width + j);
 
         // 路径上上个像素的代价数组，多两个元素是为了避免边界溢出（首尾各多一个）
-        std::vector<uint8> costLastPath(dispRange + 2, UINT8_MAX);
+        std::vector<uint32> costLastPath(dispRange + 2, UINT8_MAX);
 
         // 初始化：第一个像素的聚合代价值等于初始代价值
-        memcpy(costAggrCol, costInitCol, dispRange * sizeof(uint8));
-        memcpy(&costLastPath[1], costAggrCol, dispRange * sizeof(uint8));
+        memcpy(costAggrCol, costInitCol, dispRange * sizeof(uint32));
+        memcpy(&costLastPath[1], costAggrCol, dispRange * sizeof(uint32));
 
         // 路径上当前灰度值和上一个灰度值
         uint8 gray = *imgCol;
@@ -397,7 +397,7 @@ void SGMUtil::costAggregateDiagonalRightLeft(const uint8 *imgData, const sint32 
         }
 
         // 路径上上个像素的最小代价值
-        uint8 minCostLastPath = UINT8_MAX;
+        uint32 minCostLastPath = UINT8_MAX;
         for (auto cost: costLastPath) {
             minCostLastPath = std::min(minCostLastPath, cost);
         }
@@ -405,17 +405,17 @@ void SGMUtil::costAggregateDiagonalRightLeft(const uint8 *imgData, const sint32 
         // 自路径上第2个像素开始按顺序聚合
         for (sint32 i = 0; i < height - 1; i++) {
             gray = *imgCol;
-            uint8 minCost = UINT8_MAX;
+            uint32 minCost = UINT8_MAX;
             for (sint32 d = 0; d < dispRange; d++) {
                 // Lr(p,d) = C(p,d) + min( Lr(p-r,d), Lr(p-r,d-1) + P1, Lr(p-r,d+1) + P1, min(Lr(p-r))+P2 ) - min(Lr(p-r))
-                const uint8 cost = costInitCol[d];
-                const uint16 l1 = costLastPath[d + 1];
-                const uint16 l2 = costLastPath[d] + P1;
-                const uint16 l3 = costLastPath[d + 2] + P1;
-                const uint16 l4 = minCostLastPath + std::max(P1, P2Init / (abs(gray - grayLast) + 1));
+                const uint32 cost = costInitCol[d];
+                const uint32 l1 = costLastPath[d + 1];
+                const uint32 l2 = costLastPath[d] + P1;
+                const uint32 l3 = costLastPath[d + 2] + P1;
+                const uint32 l4 = minCostLastPath + std::max(P1, P2Init / (abs(gray - grayLast) + 1));
 
-                const uint8 costNew =
-                        cost + static_cast<uint8>(std::min(std::min(l1, l2), std::min(l3, l4)) - minCostLastPath);
+                const uint32 costNew =
+                        cost + static_cast<uint32>(std::min(std::min(l1, l2), std::min(l3, l4)) - minCostLastPath);
 
                 costAggrCol[d] = costNew;
                 minCost = std::min(minCost, costNew);
@@ -423,7 +423,7 @@ void SGMUtil::costAggregateDiagonalRightLeft(const uint8 *imgData, const sint32 
 
             // 重置上个像素的最小代价值和代价数组
             minCostLastPath = minCost;
-            memcpy(&costLastPath[1], costAggrCol, dispRange * sizeof(uint8));
+            memcpy(&costLastPath[1], costAggrCol, dispRange * sizeof(uint32));
 
             // 当前像素的行列号
             currentRow += direction;
