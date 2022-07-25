@@ -9,6 +9,8 @@
 #include "SGMUtil.h"
 #include <cstring>
 #include <algorithm>
+#include <cmath>
+#include <cfloat>
 
 class SemiGlobalMatching {
 public:
@@ -76,6 +78,9 @@ private:
     /** \brief 代价计算 */
     void computeCostSAD() const;
 
+    /** \brief 代价计算 */
+    void computeCostNCC() const;
+
     /** \brief 代价聚合 */
     void costAggregation() const;
 
@@ -116,10 +121,10 @@ private:
     uint32 *censusRight_;
 
     /** \brief 初始匹配代价 */
-    uint32 *costInit_;
+    float32 *costInit_;
 
     /** \brief 聚合匹配代价 Cost Aggregation */
-    uint32 *costAggr_;
+    float32 *costAggr_;
 
     /** \brief 左图像视差图 */
     float32 *dispLeft_;
@@ -131,28 +136,28 @@ private:
     // →    ←	 1    2
     // ↗ ↑ ↖   8  4  6
     /** \brief 聚合匹配代价-方向1	*/
-    uint32 *costAggr1_;
+    float32 *costAggr1_;
 
     /** \brief 聚合匹配代价-方向2	*/
-    uint32 *costAggr2_;
+    float32 *costAggr2_;
 
     /** \brief 聚合匹配代价-方向3	*/
-    uint32 *costAggr3_;
+    float32 *costAggr3_;
 
     /** \brief 聚合匹配代价-方向4	*/
-    uint32 *costAggr4_;
+    float32 *costAggr4_;
 
     /** \brief 聚合匹配代价-方向5	*/
-    uint32 *costAggr5_;
+    float32 *costAggr5_;
 
     /** \brief 聚合匹配代价-方向6	*/
-    uint32 *costAggr6_;
+    float32 *costAggr6_;
 
     /** \brief 聚合匹配代价-方向7	*/
-    uint32 *costAggr7_;
+    float32 *costAggr7_;
 
     /** \brief 聚合匹配代价-方向8	*/
-    uint32 *costAggr8_;
+    float32 *costAggr8_;
 
     /** \brief 右图像视差图 */
     float32 *dispRight_;
