@@ -117,6 +117,7 @@ int main() {
     dispOpenCV.convertTo(dispOpenCV, CV_8U, 255 / (64 * 16.));
     std::vector<cv::Mat> dispVector = {dispMat, dispOpenCV};
     multipleImage(dispVector, dispMat, 2);
+    cv::imwrite("../dispOpenCV.png", dispOpenCV);
     cv::imshow("dispMapCompare", dispMat);
     cv::waitKey(0);
 

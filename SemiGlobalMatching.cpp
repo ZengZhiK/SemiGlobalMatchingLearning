@@ -87,6 +87,7 @@ SemiGlobalMatching::initialize(const uint32 &width, const uint32 &height, const 
 //    costAggregation();
 //
 //    // 视差计算
+////    computeDisparityBase2();
 //    computeDisparity();
 //
 //    // 左右一致性检查
@@ -129,8 +130,7 @@ SemiGlobalMatching::initialize(const uint32 &width, const uint32 &height, const 
 //
 //    // 视差计算
 ////    computeDisparityBase();
-//
-//    // 视差计算
+////    computeDisparityBase2();
 //    computeDisparity();
 //
 //    // 左右一致性检查
@@ -173,8 +173,7 @@ bool SemiGlobalMatching::match(const uint8 *imgLeft, const uint8 *imgRight, floa
 
     // 视差计算
 //    computeDisparityBase();
-
-    // 视差计算
+//    computeDisparityBase2();
     computeDisparity();
 
     // 左右一致性检查
@@ -290,14 +289,16 @@ void SemiGlobalMatching::costAggregation() const {
 
     // 把4/8个方向加起来
     for (sint32 i = 0; i < size; i++) {
-        if (option_.numPaths == 4) {
-            costAggr_[i] = costAggr1_[i] + costAggr2_[i] + costAggr3_[i] + costAggr4_[i];
-        }
-        if (option_.numPaths == 8) {
-            costAggr_[i] =
-                    costAggr1_[i] + costAggr2_[i] + costAggr3_[i] + costAggr4_[i] + costAggr5_[i] + costAggr6_[i] +
-                    costAggr7_[i] + costAggr8_[i];
-        }
+//        if (option_.numPaths == 4) {
+//            costAggr_[i] = costAggr1_[i] + costAggr2_[i] + costAggr3_[i] + costAggr4_[i];
+//        }
+//        if (option_.numPaths == 8) {
+//            costAggr_[i] =
+//                    costAggr1_[i] + costAggr2_[i] + costAggr3_[i] + costAggr4_[i] + costAggr5_[i] + costAggr6_[i] +
+//                    costAggr7_[i] + costAggr8_[i];
+//        }
+        costAggr_[i] = costAggr1_[i] + costAggr2_[i] + costAggr3_[i] + costAggr4_[i]
+                       + costAggr5_[i] + costAggr6_[i] + costAggr7_[i] + costAggr8_[i];
     }
 }
 
@@ -333,6 +334,62 @@ void SemiGlobalMatching::computeDisparityBase() const {
                 // 如果所有视差下的代价值都一样，则该像素无效
                 dispLeft_[i * width_ + j] = Invalid_Float;
             }
+        }
+    }
+}
+
+void SemiGlobalMatching::computeDisparityBase2() const {
+    const sint32 &minDisparity = option_.minDisparity;
+    const sint32 &maxDisparity = option_.maxDisparity;
+    const sint32 dispRange = maxDisparity - minDisparity;
+    if (dispRange <= 0) {
+        return;
+    }
+
+    // 左影像视差图
+    const auto disparity = dispLeft_;
+    // 左影像聚合代价数组
+    const auto costPtr = costAggr_;
+
+    const sint32 width = width_;
+    const sint32 height = height_;
+
+    const bool isCheckUnique = option_.isCheckUnique;
+    const float32 uniquenessRatio = option_.uniquenessRatio;
+
+    // 为了加快读取效率，把单个像素的所有代价值存储到局部数组里
+    std::vector<uint16> costLocal(dispRange);
+
+    // ---逐像素计算最优视差
+    for (sint32 i = 0; i < height; i++) {
+        for (sint32 j = 0; j < width; j++) {
+            uint16 minCost = UINT16_MAX;
+            sint32 bestDisparity = 0;
+
+            // ---遍历视差范围内的所有代价值，输出最小代价值及对应的视差值
+            for (sint32 d = minDisparity; d < maxDisparity; d++) {
+                const sint32 d_idx = d - minDisparity;
+                const auto &cost = costLocal[d_idx] = costPtr[i * width * dispRange + j * dispRange + d_idx];
+                if (minCost > cost) {
+                    minCost = cost;
+                    bestDisparity = d;
+                }
+            }
+
+            // ---子像素拟合
+            if (bestDisparity == minDisparity || bestDisparity == maxDisparity - 1) {
+                disparity[i * width + j] = Invalid_Float;
+                continue;
+            }
+            // 最优视差前一个视差的代价值cost_1，后一个视差的代价值cost_2
+            const sint32 idx_1 = bestDisparity - 1 - minDisparity;
+            const sint32 idx_2 = bestDisparity + 1 - minDisparity;
+            const uint16 cost_1 = costLocal[idx_1];
+            const uint16 cost_2 = costLocal[idx_2];
+            // 解一元二次曲线极值
+            const uint16 denom = std::max(1, cost_1 + cost_2 - 2 * minCost);
+            disparity[i * width + j] =
+                    static_cast<float32>(bestDisparity) + static_cast<float32>(cost_1 - cost_2) / (denom * 2.0f);
         }
     }
 }
@@ -562,14 +619,14 @@ void SemiGlobalMatching::computeCostSAD() const {
 
                 // 中心点超出图像范围，无法匹配
                 if (j - d < 0 || j - d >= width_) {
-                    cost = 2;
+                    cost = UINT16_MAX;
                     continue;
                 }
 
                 uint16 sum = 0;
                 sint32 rL = i, cL = j, rR = i, cR = j - d;
-                for (sint32 r = -1; r <= 1; r++) {
-                    for (sint32 c = -1; c <= 1; c++) {
+                for (sint32 r = -2; r <= 2; r++) {
+                    for (sint32 c = -2; c <= 2; c++) {
                         if (rL + r >= 0 && rL + r < height_ && cL + c >= 0 && cL + c < width_) {
                             if (rR + r >= 0 && rR + r < height_ && cR + c >= 0 && cR + c < width_) {
                                 sum += (uint16) std::abs(imgLeft_[(rL + r) * width_ + (cL + c)] -
@@ -605,8 +662,8 @@ void SemiGlobalMatching::computeCostNCC() const {
 
                 float32 avg1 = 0, avg2 = 0;
                 const sint32 rL = i, cL = j, rR = i, cR = j - d;
-                for (sint32 r = -1; r <= 1; r++) {
-                    for (sint32 c = -1; c <= 1; c++) {
+                for (sint32 r = -2; r <= 2; r++) {
+                    for (sint32 c = -2; c <= 2; c++) {
                         if (rL + r >= 0 && rL + r < height_ && cL + c >= 0 && cL + c < width_) {
                             if (rR + r >= 0 && rR + r < height_ && cR + c >= 0 && cR + c < width_) {
                                 avg1 += imgLeft_[(rL + r) * width_ + (cL + c)];
@@ -615,12 +672,12 @@ void SemiGlobalMatching::computeCostNCC() const {
                         }
                     }
                 }
-                avg1 /= 9;
-                avg2 /= 9;
+                avg1 /= 25;
+                avg2 /= 25;
 
                 float32 ncc1 = 0, ncc2 = 0, ncc3 = 0, ncc = 0;
-                for (sint32 r = -1; r <= 1; r++) {
-                    for (sint32 c = -1; c <= 1; c++) {
+                for (sint32 r = -2; r <= 2; r++) {
+                    for (sint32 c = -2; c <= 2; c++) {
                         if (rL + r >= 0 && rL + r < height_ && cL + c >= 0 && cL + c < width_) {
                             if (rR + r >= 0 && rR + r < height_ && cR + c >= 0 && cR + c < width_) {
                                 ncc1 += (imgLeft_[(rL + r) * width_ + (cL + c)] - avg1) *

@@ -88,6 +88,9 @@ private:
     void computeDisparityBase() const;
 
     /** \brief 视差计算 */
+    void computeDisparityBase2() const;
+
+    /** \brief 视差计算 */
     void computeDisparity() const;
 
     /** \brief 右视差计算	 */
