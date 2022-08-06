@@ -85,52 +85,14 @@ SemiGlobalMatching::initialize(const uint32 &width, const uint32 &height, const 
 //
 //    // 代价聚合
 //    costAggregation();
+//    SGMUtil::costAggregateBilateralFiltering(this->imgLeft_, this->width_, this->height_,
+//                                             this->option_.minDisparity, this->option_.maxDisparity,
+//                                             5, 20, 5, this->costInit_, this->costAggr_);
+//
 //
 //    // 视差计算
-////    computeDisparityBase2();
-//    computeDisparity();
-//
-//    // 左右一致性检查
-//    if (option_.isCheckLR) {
-//        // 视差计算（右影像）
-//        computeDisparityRight();
-//        // 一致性检查
-//        lrCheck();
-//    }
-//
-//    // 移除小连通区
-//    if (option_.isRemoveSpeckles) {
-//        SGMUtil::removeSpeckles(dispLeft_, width_, height_, option_.diffRange, option_.minSpeckleArea, Invalid_Float);
-//    }
-//
-//    // 中值滤波
-//    SGMUtil::medianFilter(dispLeft_, dispLeft_, width_, height_, 3);
-//
-//    memcpy(dispLeft, this->dispLeft_, this->width_ * this->height_ * sizeof(float32));
-//
-//    return true;
-//}
-
-//bool SemiGlobalMatching::match(const uint8 *imgLeft, const uint8 *imgRight, float32 *dispLeft) {
-//    if (!this->isInitialized_) {
-//        return false;
-//    }
-//
-//    if (imgLeft == nullptr || imgRight == nullptr) {
-//        return false;
-//    }
-//
-//    this->imgLeft_ = imgLeft;
-//    this->imgRight_ = imgRight;
-//
-//    computeCostSAD();
-//
-//    // 代价聚合
-//    costAggregation();
-//
-//    // 视差计算
-////    computeDisparityBase();
-////    computeDisparityBase2();
+//    computeDisparityBase();
+//    computeDisparityBase2();
 //    computeDisparity();
 //
 //    // 左右一致性检查
@@ -166,10 +128,14 @@ bool SemiGlobalMatching::match(const uint8 *imgLeft, const uint8 *imgRight, floa
     this->imgLeft_ = imgLeft;
     this->imgRight_ = imgRight;
 
-    computeCostNCC();
+    computeCostSAD();
 
     // 代价聚合
-    costAggregation();
+//    costAggregation();
+    SGMUtil::costAggregateBilateralFiltering(this->imgLeft_, this->width_, this->height_,
+                                             this->option_.minDisparity, this->option_.maxDisparity,
+                                             5, 20, 5, this->costInit_, this->costAggr_);
+
 
     // 视差计算
 //    computeDisparityBase();
@@ -196,6 +162,52 @@ bool SemiGlobalMatching::match(const uint8 *imgLeft, const uint8 *imgRight, floa
 
     return true;
 }
+
+//bool SemiGlobalMatching::match(const uint8 *imgLeft, const uint8 *imgRight, float32 *dispLeft) {
+//    if (!this->isInitialized_) {
+//        return false;
+//    }
+//
+//    if (imgLeft == nullptr || imgRight == nullptr) {
+//        return false;
+//    }
+//
+//    this->imgLeft_ = imgLeft;
+//    this->imgRight_ = imgRight;
+//
+//    computeCostNCC();
+//
+//    // 代价聚合
+////    costAggregation();
+//    SGMUtil::costAggregateBilateralFiltering(this->imgLeft_, this->width_, this->height_,
+//                                             this->option_.minDisparity, this->option_.maxDisparity,
+//                                             5, 20, 5, this->costInit_, this->costAggr_);
+//
+//    // 视差计算
+////    computeDisparityBase();
+////    computeDisparityBase2();
+//    computeDisparity();
+//
+//    // 左右一致性检查
+//    if (option_.isCheckLR) {
+//        // 视差计算（右影像）
+//        computeDisparityRight();
+//        // 一致性检查
+//        lrCheck();
+//    }
+//
+//    // 移除小连通区
+//    if (option_.isRemoveSpeckles) {
+//        SGMUtil::removeSpeckles(dispLeft_, width_, height_, option_.diffRange, option_.minSpeckleArea, Invalid_Float);
+//    }
+//
+//    // 中值滤波
+//    SGMUtil::medianFilter(dispLeft_, dispLeft_, width_, height_, 3);
+//
+//    memcpy(dispLeft, this->dispLeft_, this->width_ * this->height_ * sizeof(float32));
+//
+//    return true;
+//}
 
 bool SemiGlobalMatching::reset(const uint32 &width, const uint32 &height, const SemiGlobalMatching::SGMOption &option) {
     // 释放内存
@@ -358,12 +370,12 @@ void SemiGlobalMatching::computeDisparityBase2() const {
     const float32 uniquenessRatio = option_.uniquenessRatio;
 
     // 为了加快读取效率，把单个像素的所有代价值存储到局部数组里
-    std::vector<uint16> costLocal(dispRange);
+    std::vector<float32> costLocal(dispRange);
 
     // ---逐像素计算最优视差
     for (sint32 i = 0; i < height; i++) {
         for (sint32 j = 0; j < width; j++) {
-            uint16 minCost = UINT16_MAX;
+            float32 minCost = FLT_MAX;
             sint32 bestDisparity = 0;
 
             // ---遍历视差范围内的所有代价值，输出最小代价值及对应的视差值
@@ -384,10 +396,10 @@ void SemiGlobalMatching::computeDisparityBase2() const {
             // 最优视差前一个视差的代价值cost_1，后一个视差的代价值cost_2
             const sint32 idx_1 = bestDisparity - 1 - minDisparity;
             const sint32 idx_2 = bestDisparity + 1 - minDisparity;
-            const uint16 cost_1 = costLocal[idx_1];
-            const uint16 cost_2 = costLocal[idx_2];
+            const float32 cost_1 = costLocal[idx_1];
+            const float32 cost_2 = costLocal[idx_2];
             // 解一元二次曲线极值
-            const uint16 denom = std::max(1, cost_1 + cost_2 - 2 * minCost);
+            const float32 denom = std::max(1.0f, cost_1 + cost_2 - 2 * minCost);
             disparity[i * width + j] =
                     static_cast<float32>(bestDisparity) + static_cast<float32>(cost_1 - cost_2) / (denom * 2.0f);
         }

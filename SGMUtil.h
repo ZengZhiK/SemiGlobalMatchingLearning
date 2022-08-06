@@ -11,6 +11,7 @@
 #include <cstring>
 #include <algorithm>
 #include <iostream>
+#include <cmath>
 
 namespace SGMUtil {
     //······ census工具集
@@ -109,6 +110,28 @@ namespace SGMUtil {
                                    float32 *costAggr, bool isForward);
 
     /**
+     *
+     * @param imgData
+     * @param width
+     * @param height
+     * @param minDisparity
+     * @param maxDisparity
+     * @param wndSize 双边滤波核大小
+     * @param sigmaI 灰度距离权重参数
+     * @param sigmaS 空间距离权重参数
+     * @param costInit
+     * @param costAggr
+     * @param isForward
+     */
+    void
+    costAggregateBilateralFiltering(const uint8 *imgData, const sint32 &width, const sint32 &height,
+                                    const sint32 &minDisparity, const sint32 &maxDisparity,
+                                    const sint32 &wndSize,
+                                    const float32 &sigmaI, const float32 &sigmaS,
+                                    const float32 *costInit,
+                                    float32 *costAggr);
+
+    /**
      * \brief 剔除小连通区
      * \param disparity_map		输入，视差图
      * \param width				输入，宽度
@@ -128,7 +151,8 @@ namespace SGMUtil {
      * \param height			输入，高度
      * \param wnd_size			输入，窗口宽度
      */
-    void medianFilter(const float32* in, float32* out, const sint32& width, const sint32& height, const sint32 &wndSize);
+    void
+    medianFilter(const float32 *in, float32 *out, const sint32 &width, const sint32 &height, const sint32 &wndSize);
 
     void showImageData(const uint8 *imgData, const sint32 &width, const sint32 &height);
 

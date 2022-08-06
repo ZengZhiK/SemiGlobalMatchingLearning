@@ -553,33 +553,86 @@ void SGMUtil::medianFilter(const float32 *in, float32 *out, const sint32 &width,
 
 void SGMUtil::showImageData(const uint8 *imgData, const sint32 &width, const sint32 &height) {
 //    for (int r = 0; r < height; ++r) {
-        for (int c = 0; c < width; ++c) {
-            if (c == 0) {
-                std::cout << "[";
-            }
-            if (c != width - 1) {
-                std::cout << sint32(imgData[height * width + c]) << ", ";
-            } else {
-                std::cout << sint32(imgData[height * width + c]) << "]" << std::endl;
-            }
+    for (int c = 0; c < width; ++c) {
+        if (c == 0) {
+            std::cout << "[";
         }
+        if (c != width - 1) {
+            std::cout << sint32(imgData[height * width + c]) << ", ";
+        } else {
+            std::cout << sint32(imgData[height * width + c]) << "]" << std::endl;
+        }
+    }
 //    }
 }
 
 void SGMUtil::showCostData(const uint8 *costData, const sint32 &width, const sint32 &height, const sint32 &d) {
 //    for (int r = 0; r < height; ++r) {
-        for (int c = 0; c < width; ++c) {
-            for (int z = 0; z < d; ++z) {
-                if (z == 0) {
-                    std::cout << "[";
-                }
-                if (z != d - 1) {
-                    std::cout << sint32(costData[height * width * d + c * d + z]) << ", ";
-                } else {
-                    std::cout << sint32(costData[height * width * d + c * d + z]) << "]" << std::endl;
-                }
+    for (int c = 0; c < width; ++c) {
+        for (int z = 0; z < d; ++z) {
+            if (z == 0) {
+                std::cout << "[";
             }
+            if (z != d - 1) {
+                std::cout << sint32(costData[height * width * d + c * d + z]) << ", ";
+            } else {
+                std::cout << sint32(costData[height * width * d + c * d + z]) << "]" << std::endl;
+            }
+        }
 //        }
     }
+}
+
+void spaceGaussianKernel(const sint32 &wndSize, double sigmaS, float32 *kernelS) {
+    int center = wndSize / 2;
+
+    for (int row = 0; row < wndSize; row++) {
+        for (int col = 0; col < wndSize; col++) {
+            double valueX = std::pow(col - center, 2) / (2 * std::pow(sigmaS, 2));
+            double valueY = std::pow(row - center, 2) / (2 * std::pow(sigmaS, 2));
+
+            float32 value = std::exp(-(valueX + valueY));
+
+            kernelS[row * wndSize + col] = value;
+        }
+    }
+}
+
+void SGMUtil::costAggregateBilateralFiltering(const uint8 *imgData, const sint32 &width, const sint32 &height,
+                                              const sint32 &minDisparity, const sint32 &maxDisparity,
+                                              const sint32 &wndSize, const float32 &sigmaI, const float32 &sigmaS,
+                                              const float32 *costInit, float32 *costAggr) {
+    const sint32 dispRange = maxDisparity - minDisparity;
+
+    auto *kernelS = new float32[wndSize * wndSize];
+    spaceGaussianKernel(wndSize, sigmaS, kernelS);
+
+    const sint32 radius = wndSize / 2;
+
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            auto grayCenter = imgData[i * width + j];
+            for (sint32 d = 0; d < dispRange; d++) {
+
+                float32 numerator = 0, denominator = 0;
+                for (sint32 r = -radius; r <= radius; r++) {
+                    for (sint32 c = -radius; c <= radius; c++) {
+                        const sint32 row = i + r;
+                        const sint32 col = j + c;
+                        if (row >= 0 && row < height && col >= 0 && col < width) {
+                            auto gray = imgData[row * width + col];
+                            denominator += kernelS[(r + radius) * wndSize + (c + radius)] *
+                                           exp(-pow(gray - grayCenter, 2) / (2 * pow(sigmaI, 2)));
+                            numerator += denominator * costInit[row * width * dispRange + col * dispRange + d];
+                        }
+                    }
+                }
+                costAggr[i * width * dispRange + j * dispRange + d] = numerator / denominator;
+
+            }
+        }
+    }
+
+    delete[] kernelS;
 }
 
