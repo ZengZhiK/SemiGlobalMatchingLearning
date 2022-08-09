@@ -100,10 +100,12 @@ int main() {
             if (disp == Invalid_Float) {
                 dispMat.data[i * width + j] = 0;
             } else {
-                dispMat.data[i * width + j] = static_cast<uchar>((disp - minDisp) / (maxDisp - minDisp) * 255);
+                // dispMat.data[i * width + j] = static_cast<uchar>((disp - minDisp) / (maxDisp - minDisp) * 255);
+                dispMat.data[i * width + j] = static_cast<uchar>(disp);
             }
         }
     }
+    dispMat.convertTo(dispMat, CV_8U, 255 / 64.);
     cv::imwrite("../dispMap.png", dispMat);
     cv::imshow("dispMap", dispMat);
 

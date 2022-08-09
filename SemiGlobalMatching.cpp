@@ -65,57 +65,6 @@ SemiGlobalMatching::initialize(const uint32 &width, const uint32 &height, const 
     return this->isInitialized_;
 }
 
-//bool SemiGlobalMatching::match(const uint8 *imgLeft, const uint8 *imgRight, float32 *dispLeft) {
-//    if (!this->isInitialized_) {
-//        return false;
-//    }
-//
-//    if (imgLeft == nullptr || imgRight == nullptr) {
-//        return false;
-//    }
-//
-//    this->imgLeft_ = imgLeft;
-//    this->imgRight_ = imgRight;
-//
-//    // census变换
-//    censusTransform();
-//
-//    // 代价计算
-//    computeCostCensus();
-//
-//    // 代价聚合
-//    costAggregation();
-//    SGMUtil::costAggregateBilateralFiltering(this->imgLeft_, this->width_, this->height_,
-//                                             this->option_.minDisparity, this->option_.maxDisparity,
-//                                             5, 20, 5, this->costInit_, this->costAggr_);
-//
-//
-//    // 视差计算
-//    computeDisparityBase();
-//    computeDisparityBase2();
-//    computeDisparity();
-//
-//    // 左右一致性检查
-//    if (option_.isCheckLR) {
-//        // 视差计算（右影像）
-//        computeDisparityRight();
-//        // 一致性检查
-//        lrCheck();
-//    }
-//
-//    // 移除小连通区
-//    if (option_.isRemoveSpeckles) {
-//        SGMUtil::removeSpeckles(dispLeft_, width_, height_, option_.diffRange, option_.minSpeckleArea, Invalid_Float);
-//    }
-//
-//    // 中值滤波
-//    SGMUtil::medianFilter(dispLeft_, dispLeft_, width_, height_, 3);
-//
-//    memcpy(dispLeft, this->dispLeft_, this->width_ * this->height_ * sizeof(float32));
-//
-//    return true;
-//}
-
 bool SemiGlobalMatching::match(const uint8 *imgLeft, const uint8 *imgRight, float32 *dispLeft) {
     if (!this->isInitialized_) {
         return false;
@@ -128,7 +77,11 @@ bool SemiGlobalMatching::match(const uint8 *imgLeft, const uint8 *imgRight, floa
     this->imgLeft_ = imgLeft;
     this->imgRight_ = imgRight;
 
-    computeCostSAD();
+    // census变换
+    censusTransform();
+
+    // 代价计算
+    computeCostCensus();
 
     // 代价聚合
 //    costAggregation();
@@ -138,8 +91,8 @@ bool SemiGlobalMatching::match(const uint8 *imgLeft, const uint8 *imgRight, floa
 
 
     // 视差计算
-//    computeDisparityBase();
-//    computeDisparityBase2();
+    computeDisparityBase();
+    computeDisparityBase2();
     computeDisparity();
 
     // 左右一致性检查
@@ -162,6 +115,53 @@ bool SemiGlobalMatching::match(const uint8 *imgLeft, const uint8 *imgRight, floa
 
     return true;
 }
+
+//bool SemiGlobalMatching::match(const uint8 *imgLeft, const uint8 *imgRight, float32 *dispLeft) {
+//    if (!this->isInitialized_) {
+//        return false;
+//    }
+//
+//    if (imgLeft == nullptr || imgRight == nullptr) {
+//        return false;
+//    }
+//
+//    this->imgLeft_ = imgLeft;
+//    this->imgRight_ = imgRight;
+//
+//    computeCostSAD();
+//
+//    // 代价聚合
+////    costAggregation();
+//    SGMUtil::costAggregateBilateralFiltering(this->imgLeft_, this->width_, this->height_,
+//                                             this->option_.minDisparity, this->option_.maxDisparity,
+//                                             5, 20, 5, this->costInit_, this->costAggr_);
+//
+//
+//    // 视差计算
+////    computeDisparityBase();
+////    computeDisparityBase2();
+//    computeDisparity();
+//
+//    // 左右一致性检查
+//    if (option_.isCheckLR) {
+//        // 视差计算（右影像）
+//        computeDisparityRight();
+//        // 一致性检查
+//        lrCheck();
+//    }
+//
+//    // 移除小连通区
+//    if (option_.isRemoveSpeckles) {
+//        SGMUtil::removeSpeckles(dispLeft_, width_, height_, option_.diffRange, option_.minSpeckleArea, Invalid_Float);
+//    }
+//
+//    // 中值滤波
+//    SGMUtil::medianFilter(dispLeft_, dispLeft_, width_, height_, 3);
+//
+//    memcpy(dispLeft, this->dispLeft_, this->width_ * this->height_ * sizeof(float32));
+//
+//    return true;
+//}
 
 //bool SemiGlobalMatching::match(const uint8 *imgLeft, const uint8 *imgRight, float32 *dispLeft) {
 //    if (!this->isInitialized_) {
